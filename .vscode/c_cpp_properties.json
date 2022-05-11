@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/cheerp/include/sys/"
+            ],
+            "defines": [],
+            "compilerPath": "/opt/cheerp/bin/clang++",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64",
+            "browse": {
+                "path": []
+            }
+        }
+    ],
+    "version": 4
+}
