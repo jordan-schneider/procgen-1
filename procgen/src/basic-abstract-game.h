@@ -80,6 +80,7 @@ class BasicAbstractGame : public Game {
     int get_agent_index();
     std::vector<int> get_cells_with_type(int type);
     Grid<int> get_grid();
+    void set_grid(Grid<int> &grid);
 
     void check_grid_collisions(const std::shared_ptr<Entity> &src);
     float get_distance(const std::shared_ptr<Entity> &p0, const std::shared_ptr<Entity> &p1);

@@ -218,6 +218,10 @@ Grid<int> BasicAbstractGame::get_grid() {
     return Grid<int>(grid);
 }
 
+void BasicAbstractGame::set_grid(Grid<int> &new_grid) {
+    this->grid = new_grid;
+}
+
 void BasicAbstractGame::set_obj(int idx, int elem) {
     grid.set_index(idx, elem);
 }

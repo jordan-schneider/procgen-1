@@ -22,11 +22,11 @@ void bgr32_to_rgb888(void *dst_rgb888, void *src_bgr32, int w, int h) {
     }
 }
 
-void canvas_to_rgb888(client::Uint8Array *dst_rgb888, client::HTMLCanvasElement* c, int w, int h) {
+void canvas_to_rgb888(client::Uint8Array *dst_rgb888, client::HTMLCanvasElement *c, int w, int h) {
     uint8_t *dst = &(*dst_rgb888)[0];
-    auto* ctx = static_cast<client::CanvasRenderingContext2D*>(c->getContext("2d"));
-    auto* data = ctx->getImageData(0, 0, w, h);
-    double* src = &(*data->get_data())[0];
+    auto *ctx = static_cast<client::CanvasRenderingContext2D *>(c->getContext("2d"));
+    auto *data = ctx->getImageData(0, 0, w, h);
+    double *src = &(*data->get_data())[0];
 
     for (int y = 0; y < h; y++) {
         double *s = src + y * w * 4;
@@ -41,7 +41,8 @@ void canvas_to_rgb888(client::Uint8Array *dst_rgb888, client::HTMLCanvasElement*
     }
 }
 
-Game::Game(std::string name) : game_name(name) {
+Game::Game(std::string name)
+    : game_name(name) {
     timeout = 1000;
     episodes_remaining = 0;
     last_reward = -1;
@@ -93,7 +94,7 @@ void Game::parse_options(std::string name, VecOptions opts) {
     opts.ensure_empty();
 }
 
-void Game::render_to_canvas(client::HTMLCanvasElement* canvas, int w, int h, bool antialias) {
+void Game::render_to_canvas(client::HTMLCanvasElement *canvas, int w, int h, bool antialias) {
     QPainter p(canvas);
 
     if (antialias) {
@@ -170,12 +171,12 @@ void Game::step() {
 }
 
 void Game::observe() {
-    //bgr32_to_rgb888(obs_bufs[0], render_buf, RES_W, RES_H);
+    // bgr32_to_rgb888(obs_bufs[0], render_buf, RES_W, RES_H);
     QImage img(RES_W, RES_H, QImage::Format_ARGB32);
     render_to_canvas(img.getCanvas(), RES_W, RES_H, false);
-    //auto* rgb = new client::Uint8Array(RES_W*RES_H*3);
-    //canvas_to_rgb888(rgb, img.getCanvas(), RES_W, RES_H);
-    auto* rgb = img.getCanvas();
+    // auto* rgb = new client::Uint8Array(RES_W*RES_H*3);
+    // canvas_to_rgb888(rgb, img.getCanvas(), RES_W, RES_H);
+    auto *rgb = img.getCanvas();
     state->set_rgb(rgb);
     state->set_reward(step_data.reward);
     state->set_prev_level_seed(prev_level_seed);
@@ -194,7 +195,7 @@ void Game::game_init() {
 
 void Game::serialize(WriteBuffer *b) {
     b->write_int(SERIALIZE_VERSION);
-    
+
     b->write_string(game_name);
 
     b->write_int(options.paint_vel_info);
@@ -300,4 +301,7 @@ void Game::deserialize(ReadBuffer *b) {
 
     cur_time = b->read_int();
     is_waiting_for_step = b->read_int();
+}
+
+void Game::game_set_state(client::GameState *state) {
 }

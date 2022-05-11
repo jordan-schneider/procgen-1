@@ -94,32 +94,37 @@ class Game {
 
     int fixed_asset_seed = 0;
 
-    //uint32_t render_buf[RES_W * RES_H];
+    // uint32_t render_buf[RES_W * RES_H];
 
     int cur_time = 0;
 
     bool is_waiting_for_step = false;
 
     // pointers to buffers
-    //int32_t *action_ptr;
-    //std::vector<void *> obs_bufs;
-    //std::vector<void *> info_bufs;
-    //float *reward_ptr = nullptr;
-    //uint8_t *first_ptr = nullptr;
-    client::GameState* state;
+    // int32_t *action_ptr;
+    // std::vector<void *> obs_bufs;
+    // std::vector<void *> info_bufs;
+    // float *reward_ptr = nullptr;
+    // uint8_t *first_ptr = nullptr;
+    client::GameState *state;
 
     Game(std::string name);
     void step();
     void reset();
-    void render_to_canvas(client::HTMLCanvasElement* canvas, int w, int h, bool antialias);
+    void render_to_canvas(client::HTMLCanvasElement *canvas, int w, int h, bool antialias);
     void parse_options(std::string name, VecOptions opt_vec);
 
+    // Pure virtual functions every game must implement for itself
     virtual ~Game() = 0;
     virtual void observe();
     virtual void game_init() = 0;
     virtual void game_reset() = 0;
     virtual void game_step() = 0;
     virtual void game_draw(QPainter &p, const QRect &rect) = 0;
+
+    // game_set_state is not pure virtual because I don't want to write an implementation for all
+    // games right now. This should be fixed in the future.
+    virtual void game_set_state(client::GameState *state);
     virtual void serialize(WriteBuffer *b);
     virtual void deserialize(ReadBuffer *b);
 

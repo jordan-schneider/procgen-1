@@ -1,5 +1,6 @@
 #include "../basic-abstract-game.h"
 #include "../assetgen.h"
+#include "../cheerputils.cpp"
 #include <set>
 #include <queue>
 #include <iterator>
@@ -357,13 +358,13 @@ class MinerGame : public BasicAbstractGame {
 
         auto latent_state = get_latent_state();
 
-        auto* js_state = static_cast<client::MinerState*>(this->state);
+        auto *js_state = static_cast<client::MinerState *>(this->state);
 
         js_state->set_grid_width(latent_state.grid_width);
         js_state->set_grid_height(latent_state.grid_height);
 
-        int32_t grid_size = latent_state.grid_width*latent_state.grid_height;
-        int32_t* grid = new int32_t[grid_size];
+        int32_t grid_size = latent_state.grid_width * latent_state.grid_height;
+        int32_t *grid = new int32_t[grid_size];
         auto grid_start = latent_state.grid.begin();
         auto grid_stop = latent_state.grid.begin();
         std::advance(grid_stop, grid_size);
@@ -375,6 +376,23 @@ class MinerGame : public BasicAbstractGame {
 
         js_state->set_exit_x(latent_state.exit_x);
         js_state->set_exit_y(latent_state.exit_y);
+    }
+
+    void game_set_state(client::GameState *state) override {
+        auto miner_state = static_cast<client::MinerState *>(state);
+        auto grid_vals = miner_state->get_grid();
+
+        for (int idx = 0; idx < grid_vals->get_length(); idx++) {
+            set_obj(idx, (*grid_vals)[idx]);
+        }
+
+        agent->x = miner_state->get_agent_x() + 0.5f;
+        agent->y = miner_state->get_agent_y() + 0.5f;
+
+        auto exit = *std::find_if(entities.begin(), entities.end(), [](std::shared_ptr<Entity> e) { return e->type == EXIT; });
+
+        exit->x = miner_state->get_exit_x() + 0.5f;
+        exit->y = miner_state->get_exit_y() + 0.5f;
     }
 };
 

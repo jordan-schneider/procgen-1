@@ -103,8 +103,9 @@ async function main() {
 
 	c.render();
 	const state = c.observe();
+	const start_pos = [deepcopy(state.agent_x), deepcopy(state.agent_y)];
 	printState(state, stats, screens, realtime);
-	setInterval(() => {
+	setInterval((start_pos) => {
 		if (!realtime && keyState.size == 0)
 			return;
 		const action = getAction();
@@ -113,5 +114,17 @@ async function main() {
 		const state = c.observe();
 		printState(state, stats, screens, realtime);
 		resetKeys();
-	}, 1000 / 15);
+
+		new_state = deepcopy(state);
+		new_state.agent_x = start_pos[0];
+		new_state.agent_y = start_pos[1];
+		new_grid = new Int32Array();
+		for (const [key, value] in Object.entries(new_state.grid)) {
+			new_grid[key] = value;
+		}
+		new_grid[0] = 100;
+		new_state.grid = new_grid;
+		c.setState(new_state);
+		c.render();
+	}, 1000 / 15, start_pos);
 }
