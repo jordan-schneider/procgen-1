@@ -42,8 +42,12 @@ def is_redundant(
 
 
 def remove_redundant(vecs: np.ndarray) -> np.ndarray:
-    nonredundant: List[np.ndarray] = [vecs[0]]
+    nonredundant: np.ndarray = vecs[0].reshape(1, -1)
     for vec in vecs[1:]:
         if not is_redundant(vec, nonredundant):
-            nonredundant.append(vec)
+            nonredundant = np.vstack((nonredundant, vec))
     return np.stack(nonredundant)
+
+
+def remove_zeros(vecs: np.ndarray) -> np.ndarray:
+    return vecs[np.any(vecs != 0.0, axis=1)]

@@ -24,8 +24,8 @@ def infogain(feature_diffs: np.ndarray, reward_posterior: np.ndarray) -> np.ndar
         1.0
         / n_reward_samples
         * (
-            np.sum(p1 * np.log2(n_reward_samples * p1 / p1.sum(axis=0)), axis=0)
-            + np.sum(p2 * np.log2(n_reward_samples * p2 / p2.sum(axis=0)), axis=0)
+            np.sum(p1.T * np.log2(n_reward_samples * p1.T / p1.sum(axis=1)), axis=0)
+            + np.sum(p2.T * np.log2(n_reward_samples * p2.T / p2.sum(axis=1)), axis=0)
         )
     )
 
@@ -49,7 +49,7 @@ def successive_elimination(
         np.ndarray: Index array of selected questions.
     """
     infogains = infogain(question_samples, reward_samples)
-    indices = np.argpartition(infogains, inital_questions)[:inital_questions]
+    indices = np.argpartition(infogains, inital_questions - 1)[:inital_questions]
 
     greedy_questions = question_samples[indices]
 

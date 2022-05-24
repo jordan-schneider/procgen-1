@@ -1,7 +1,8 @@
+import logging
 import pickle
 import sqlite3
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Literal, Optional, Tuple
 
 import fire
 import numpy as np
@@ -12,7 +13,9 @@ from procgen.env import ENV_NAMES, ProcgenGym3Env
 from biyik import successive_elimination
 from gen_trajectory import Trajectory, collect_feature_trajs, collect_trajs
 from random_policy import RandomPolicy
-from util import remove_redundant
+from util import remove_redundant, remove_zeros
+
+QuestionType = Literal["state", "action", "traj"]
 
 
 def init_db(db_path: Path, schema_path: Path):
@@ -24,14 +27,16 @@ def init_db(db_path: Path, schema_path: Path):
     conn.close()
 
 
-def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
+def insert_traj(
+    conn: sqlite3.Connection, traj: Trajectory, modality: QuestionType
+) -> int:
     c = conn.execute(
         "INSERT INTO trajectories (start_state, actions, env, modality) VALUES (:start_state, :actions, :env, :modality)",
         {
             "start_state": pickle.dumps(traj.start_state),
             "actions": pickle.dumps(traj.actions),
             "env": traj.env_name,
-            "modality": "traj",
+            "modality": modality,
         },
     )
     return int(c.lastrowid)
@@ -41,24 +46,43 @@ def insert_question(
     conn: sqlite3.Connection,
     traj_ids: Tuple[int, int],
     algo: Literal["random", "infogain"],
+    modality: QuestionType,
 ) -> int:
     c = conn.execute(
         "INSERT INTO questions (first_id, second_id, modality, algorithm) VALUES (:first_id, :second_id, :modality, :algo)",
         {
             "first_id": traj_ids[0],
             "second_id": traj_ids[1],
-            "modality": "traj",
+            "modality": modality,
             "algo": algo,
         },
     )
     return int(c.lastrowid)
 
 
+def correct_n_actions(question_type: QuestionType, n_actions: int) -> int:
+    if question_type == "state":
+        return 0
+    elif question_type == "action":
+        return 1
+    elif question_type == "traj":
+        return n_actions
+    else:
+        raise ValueError(f"Question type {question_type} not recognized")
+
+
 def gen_random_questions(
-    db_path: Path, env: ENV_NAMES, num_questions: int, seed: int = 0
+    db_path: Path,
+    env: ENV_NAMES,
+    num_questions: int,
+    question_type: QuestionType,
+    n_actions: Optional[int] = 10,
+    seed: int = 0,
 ) -> None:
     conn = sqlite3.connect(db_path)
     env_name = env
+
+    n_actions = correct_n_actions(question_type, n_actions)
 
     env = ProcgenGym3Env(1, env)
     trajs = collect_trajs(
@@ -66,12 +90,15 @@ def gen_random_questions(
         env_name,
         policy=RandomPolicy(env, np.random.default_rng(seed)),
         num_trajs=num_questions * 2,
+        n_actions=n_actions,
     )
 
     for traj_1, traj_2 in zip(trajs[::2], trajs[1::2]):
-        traj_1_id = insert_traj(conn, traj_1)
-        traj_2_id = insert_traj(conn, traj_2)
-        insert_question(conn, (traj_1_id, traj_2_id), "random")
+        if traj_1 == traj_2:
+            continue
+        traj_1_id = insert_traj(conn, traj_1, question_type)
+        traj_2_id = insert_traj(conn, traj_2, question_type)
+        insert_question(conn, (traj_1_id, traj_2_id), "random", question_type)
     conn.commit()
     conn.close()
 
@@ -79,46 +106,100 @@ def gen_random_questions(
 def gen_batch_infogain_questions(
     db_path: Path,
     env: FEATURE_ENV_NAMES,
-    num_reward_samples: int,
     num_questions: int,
+    question_type: QuestionType,
+    num_reward_samples: int,
     init_questions: int,
     num_trajs: int,
+    n_actions: Optional[int] = 10,
     seed: int = 0,
+    verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
+    logging.basicConfig(level=verbosity)
     conn = sqlite3.connect(db_path)
     env_name = env
 
+    n_actions = correct_n_actions(question_type, n_actions)
+
     rng = np.random.default_rng(seed)
 
-    env = make_env(env)
+    env = make_env(env, num=1, reward=1)
     trajs = collect_feature_trajs(
         env,
         env_name,
         policy=RandomPolicy(env, rng),
         num_trajs=num_trajs,
+        n_actions=n_actions,
+    )
+    questions = list(zip(trajs[::2], trajs[1::2]))
+    question_diffs = np.stack(
+        [
+            np.sum(question[0].features, axis=0) - np.sum(question[1].features, axis=0)
+            for question in questions
+        ]
     )
 
-    questions = list(zip(trajs[::2], trajs[1::2]))
-    question_diffs = np.array(
-        question[0].features - question[1].features for question in questions
-    )
+    logging.debug(f"{len(trajs)} trajectories collected")
+    question_diffs = remove_zeros(question_diffs)
     question_diffs = remove_redundant(question_diffs)
+    logging.debug(f"{len(question_diffs)} questions remaining after redundancy removal")
+    if question_diffs.shape[0] < init_questions:
+        logging.warning(
+            f"{init_questions} initial questions requested, but only {question_diffs.shape[0]} questions available after redundancy removal"
+        )
+        init_questions = question_diffs.shape[0]
 
     # TODO: Implement non-uniform priors
     reward_samples = rng.multivariate_normal(
         mean=np.zeros_like(question_diffs[0]),
-        cov=np.eye(question_diffs.shape[0]),
+        cov=np.eye(question_diffs.shape[1]),
         size=num_reward_samples,
     )
 
     indices = successive_elimination(
         question_diffs, reward_samples, num_questions, init_questions
     )
+    # np array over questions for scalar list index
+    for traj_1, traj_2 in np.array(questions)[indices]:
+        traj_1_id = insert_traj(conn, traj_1, question_type)
+        traj_2_id = insert_traj(conn, traj_2, question_type)
+        insert_question(conn, (traj_1_id, traj_2_id), "infogain", question_type)
+    conn.commit()
+    conn.close()
 
-    for traj_1, traj_2 in questions[indices]:
-        traj_1_id = insert_traj(conn, traj_1)
-        traj_2_id = insert_traj(conn, traj_2)
-        insert_question(conn, (traj_1_id, traj_2_id), "infogain")
+
+def remove_duplicate_questions(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """DELETE FROM questions WHERE id in (
+            SELECT id FROM (
+                SELECT questions.id,
+                       t1.start_state as start1, t1.actions as actions1, t1.env as env1, t1.modality as modality1,
+                       t2.start_state as start2, t2.actions as actions2, t2.env as env2, t2.modality as modality2
+                FROM questions
+                INNER JOIN trajectories t1 ON questions.first_id = t1.id
+                INNER JOIN trajectories t2 ON questions.second_id = t2.id
+            ) WHERE start1 = start2 AND actions1 = actions2 AND env1 = env2 AND modality1 = modality2
+        );
+        """
+    )
+    conn.commit()
+
+
+def remove_orphan_trajectories(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """DELETE FROM trajectories WHERE id NOT IN (
+            SELECT first_id AS id FROM questions UNION ALL
+            SELECT second_id AS id FROM questions);
+        """
+    )
+    conn.commit()
+
+
+def clean_db(db_path: Path) -> None:
+    conn = sqlite3.connect(db_path)
+    remove_duplicate_questions(conn)
+    remove_orphan_trajectories(conn)
+
     conn.commit()
     conn.close()
 
@@ -129,5 +210,6 @@ if __name__ == "__main__":
             "gen_random_questions": gen_random_questions,
             "gen_infogain_questions": gen_batch_infogain_questions,
             "init_db": init_db,
+            "clean_db": clean_db,
         }
     )
