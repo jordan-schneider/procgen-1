@@ -80,7 +80,7 @@ def remove_redundant(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def remove_zeros(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    indices = np.any(vecs != 0.0, axis=1)
+    indices = np.where(np.any(vecs != 0.0, axis=1))[0]
     return vecs[indices], indices
 
 

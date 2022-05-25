@@ -105,8 +105,10 @@ def compute_diffs(
     questions: List[Tuple[FeatureTrajectory, FeatureTrajectory]]
 ) -> np.ndarray:
     return np.stack(
-        question[0].features.sum(axis=0) - question[1].features.sum(axis=0)
-        for question in questions
+        [
+            question[0].features.sum(axis=0) - question[1].features.sum(axis=0)
+            for question in questions
+        ]
     )
 
 
