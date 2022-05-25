@@ -35,10 +35,11 @@ def insert_traj(
     conn: sqlite3.Connection, traj: Trajectory, modality: QuestionType
 ) -> int:
     c = conn.execute(
-        "INSERT INTO trajectories (start_state, actions, env, modality) VALUES (:start_state, :actions, :env, :modality)",
+        "INSERT INTO trajectories (start_state, actions, length, env, modality) VALUES (:start_state, :actions, :length, :env, :modality)",
         {
             "start_state": pickle.dumps(traj.start_state),
             "actions": pickle.dumps(traj.actions),
+            "length": len(traj.actions),
             "env": traj.env_name,
             "modality": modality,
         },
