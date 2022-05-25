@@ -1,4 +1,3 @@
-import logging
 import pickle
 import sqlite3
 from pathlib import Path
@@ -11,9 +10,14 @@ from linear_procgen import make_env
 from procgen.env import ENV_NAMES, ProcgenGym3Env
 
 from biyik import successive_elimination
-from gen_trajectory import Trajectory, collect_feature_trajs, collect_trajs
-from random_policy import RandomPolicy
-from util import remove_redundant, remove_zeros
+from gen_trajectory import (
+    Trajectory,
+    collect_feature_questions,
+    collect_trajs,
+    compute_diffs,
+)
+from random_policy import RandomGridPolicy
+from util import setup_logging
 
 QuestionType = Literal["state", "action", "traj"]
 
@@ -78,45 +82,53 @@ def gen_random_questions(
     question_type: QuestionType,
     n_actions: Optional[int] = 10,
     seed: int = 0,
+    verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
+    setup_logging(verbosity)
     conn = sqlite3.connect(db_path)
     env_name = env
 
     n_actions = correct_n_actions(question_type, n_actions)
 
     env = ProcgenGym3Env(1, env)
-    trajs = collect_trajs(
-        env,
-        env_name,
-        policy=RandomPolicy(env, np.random.default_rng(seed)),
-        num_trajs=num_questions * 2,
-        n_actions=n_actions,
-    )
+    questions = 0
+    while questions < num_questions:
+        trajs = collect_trajs(
+            env,
+            env_name,
+            policy=RandomGridPolicy(env, np.random.default_rng(seed)),
+            num_trajs=num_questions * 2,
+            n_actions=n_actions,
+        )
 
-    for traj_1, traj_2 in zip(trajs[::2], trajs[1::2]):
-        if traj_1 == traj_2:
-            continue
-        traj_1_id = insert_traj(conn, traj_1, question_type)
-        traj_2_id = insert_traj(conn, traj_2, question_type)
-        insert_question(conn, (traj_1_id, traj_2_id), "random", question_type)
+        for traj_1, traj_2 in zip(trajs[::2], trajs[1::2]):
+            if traj_1 == traj_2:
+                continue
+            traj_1_id = insert_traj(conn, traj_1, question_type)
+            traj_2_id = insert_traj(conn, traj_2, question_type)
+            insert_question(conn, (traj_1_id, traj_2_id), "random", question_type)
+            questions += 1
     conn.commit()
     conn.close()
 
 
 def gen_batch_infogain_questions(
     db_path: Path,
+    true_reward_path: Path,
     env: FEATURE_ENV_NAMES,
     num_questions: int,
     question_type: QuestionType,
     num_reward_samples: int,
     init_questions: int,
     num_trajs: int,
+    reward_variance: float = 0.01,
     n_actions: Optional[int] = 10,
     seed: int = 0,
     verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
-    logging.basicConfig(level=verbosity)
+    setup_logging(verbosity)
     conn = sqlite3.connect(db_path)
+    reward = np.load(true_reward_path)
     env_name = env
 
     n_actions = correct_n_actions(question_type, n_actions)
@@ -124,35 +136,20 @@ def gen_batch_infogain_questions(
     rng = np.random.default_rng(seed)
 
     env = make_env(env, num=1, reward=1)
-    trajs = collect_feature_trajs(
+
+    questions = collect_feature_questions(
         env,
         env_name,
-        policy=RandomPolicy(env, rng),
-        num_trajs=num_trajs,
-        n_actions=n_actions,
+        RandomGridPolicy(env, rng),
+        init_questions,
+        num_trajs,
+        n_actions,
     )
-    questions = list(zip(trajs[::2], trajs[1::2]))
-    question_diffs = np.stack(
-        [
-            np.sum(question[0].features, axis=0) - np.sum(question[1].features, axis=0)
-            for question in questions
-        ]
-    )
+    question_diffs = compute_diffs(questions)
 
-    logging.debug(f"{len(trajs)} trajectories collected")
-    question_diffs = remove_zeros(question_diffs)
-    question_diffs = remove_redundant(question_diffs)
-    logging.debug(f"{len(question_diffs)} questions remaining after redundancy removal")
-    if question_diffs.shape[0] < init_questions:
-        logging.warning(
-            f"{init_questions} initial questions requested, but only {question_diffs.shape[0]} questions available after redundancy removal"
-        )
-        init_questions = question_diffs.shape[0]
-
-    # TODO: Implement non-uniform priors
     reward_samples = rng.multivariate_normal(
-        mean=np.zeros_like(question_diffs[0]),
-        cov=np.eye(question_diffs.shape[1]),
+        mean=reward,
+        cov=np.eye(question_diffs.shape[1]) * reward_variance,
         size=num_reward_samples,
     )
 

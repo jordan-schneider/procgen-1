@@ -7,6 +7,8 @@ from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES
 
+from util import remove_duplicates, remove_zeros
+
 
 @dataclass
 class State:
@@ -97,3 +99,33 @@ def collect_feature_trajs(
             FeatureTrajectory(start_state, actions, env_name, np.stack(features))
         )
     return out
+
+
+def compute_diffs(
+    questions: List[Tuple[FeatureTrajectory, FeatureTrajectory]]
+) -> np.ndarray:
+    return np.stack(
+        question[0].features.sum(axis=0) - question[1].features.sum(axis=0)
+        for question in questions
+    )
+
+
+def collect_feature_questions(
+    env: gym3.Env,
+    env_name: FEATURE_ENV_NAMES,
+    policy: Callable[[np.ndarray], int],
+    n_questions: int,
+    batch_size: int,
+    n_actions: int = -1,
+) -> np.ndarray:
+    questions = []
+
+    while len(questions) < n_questions:
+        trajs = collect_feature_trajs(env, env_name, policy, batch_size, n_actions)
+        questions.extend(zip(trajs[::2], trajs[1::2]))
+        diffs = compute_diffs(questions)
+        diffs, indices = remove_zeros(diffs)
+        diffs, tmp_indices = remove_duplicates(diffs)
+        indices = indices[tmp_indices]
+        questions = [questions[i] for i in indices]
+    return questions

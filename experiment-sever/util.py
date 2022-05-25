@@ -1,8 +1,38 @@
 import logging
-from typing import List
+from pathlib import Path
+from typing import Literal, Optional, Tuple
 
 import numpy as np
 from scipy.optimize import linprog  # type: ignore
+
+
+def setup_logging(
+    level: Literal["INFO", "DEBUG"],
+    outdir: Optional[Path] = None,
+    name: str = "log.txt",
+    multiple_files: bool = True,
+    force: bool = False,
+    append: bool = False,
+) -> None:
+    FORMAT = "%(levelname)s:%(filename)s:%(lineno)d:%(asctime)s:%(message)s"
+
+    logging.basicConfig(level=level, format=FORMAT, force=force)
+    if outdir is not None:
+        logger = logging.getLogger()
+        files = [
+            handler.baseFilename
+            for handler in logger.handlers
+            if isinstance(handler, logging.FileHandler)
+        ]
+        path = str(outdir / name)
+        if multiple_files and path not in files:
+            fh = logging.FileHandler(filename=path, mode="a" if append else "w")
+            fh.setLevel(level)
+            fh.setFormatter(logging.Formatter(FORMAT))
+            logging.getLogger().addHandler(fh)
+
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("scipy").setLevel(logging.WARNING)
 
 
 def is_redundant(
@@ -24,7 +54,6 @@ def is_redundant(
     solution = linprog(
         halfspace, A_ub=-halfspaces, b_ub=b, bounds=(-1, 1), method="revised simplex"
     )
-    logging.debug(f"LP Solution={solution}")
     if solution["status"] != 0:
         logging.info("Revised simplex method failed. Trying interior point method.")
         solution = linprog(halfspace, A_ub=-halfspaces, b_ub=b, bounds=(-1, 1))
@@ -37,17 +66,33 @@ def is_redundant(
         return False
     else:
         # redundant since without constraint c^T w >=0
-        logging.debug("Redundant")
         return True
 
 
-def remove_redundant(vecs: np.ndarray) -> np.ndarray:
-    nonredundant: np.ndarray = vecs[0].reshape(1, -1)
-    for vec in vecs[1:]:
+def remove_redundant(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    nonredundant = vecs[0].reshape(1, -1)
+    indices = [0]
+    for i, vec in enumerate(vecs[1:]):
         if not is_redundant(vec, nonredundant):
             nonredundant = np.vstack((nonredundant, vec))
-    return np.stack(nonredundant)
+            indices.append(i + 1)
+    return nonredundant, np.array(indices)
 
 
-def remove_zeros(vecs: np.ndarray) -> np.ndarray:
-    return vecs[np.any(vecs != 0.0, axis=1)]
+def remove_zeros(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    indices = np.any(vecs != 0.0, axis=1)
+    return vecs[indices], indices
+
+
+def remove_duplicates(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    unique = vecs[0]
+    indices = [0]
+    for i, vec in enumerate(vecs[1:]):
+        if not np.any(np.linalg.norm(unique - vec) < 1e-4):
+            unique = np.vstack((unique, vec))
+            indices.append(i + 1)
+    return unique, np.array(indices)
+
+
+def orient(reward: np.ndarray, halfspaces: np.ndarray) -> np.ndarray:
+    return (halfspaces.T * ((halfspaces @ reward < 0) * -1)).T
