@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 
-from logspace import log_normalize_logs
+from experiment_server.logspace import log_normalize_logs
 
 
 def boltzmann_likelihood(

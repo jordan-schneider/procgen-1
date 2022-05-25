@@ -7,7 +7,7 @@ from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES
 
-from util import remove_duplicates, remove_zeros
+from experiment_server.util import remove_duplicates, remove_zeros
 
 
 @dataclass

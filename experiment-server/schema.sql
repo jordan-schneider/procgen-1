@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS trajectories(
   id INTEGER PRIMARY KEY,
   start_state BLOB NOT NULL,
   actions BLOB NOT NULL,
+  length INT NOT NULL,
   env TEXT NOT NULL,
   modality TEXT NOT NULL
 );

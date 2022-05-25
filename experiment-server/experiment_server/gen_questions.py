@@ -9,15 +9,15 @@ from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES, ProcgenGym3Env
 
-from biyik import successive_elimination
-from gen_trajectory import (
+from experiment_server.biyik import successive_elimination
+from experiment_server.gen_trajectory import (
     Trajectory,
     collect_feature_questions,
     collect_trajs,
     compute_diffs,
 )
-from random_policy import RandomGridPolicy
-from util import setup_logging
+from experiment_server.random_policy import RandomGridPolicy
+from experiment_server.util import setup_logging
 
 QuestionType = Literal["state", "action", "traj"]
 

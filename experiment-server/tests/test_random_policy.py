@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
+from experiment_server.random_policy import RandomGridPolicy
 from hypothesis import given
 from linear_procgen import make_env
 from procgen import ProcgenGym3Env
-from random_policy import RandomGridPolicy
 
 from strategies import seed as seed_strategy
 

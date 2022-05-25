@@ -1,7 +1,5 @@
-from turtle import backward
-
 import numpy as np
-from biyik import infogain, successive_elimination
+from experiment_server.biyik import infogain, successive_elimination
 from hypothesis import given
 
 from strategies import halfplanes_strategy, rewards_strategy
