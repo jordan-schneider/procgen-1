@@ -115,7 +115,7 @@ def successive_elimination(
     question_samples: np.ndarray,
     reward_samples: np.ndarray,
     n_out_questions: int,
-    inital_questions=200,
+    initial_questions=200,
 ) -> np.ndarray:
     """Selects a batch of questions to ask using the successive elimination algorithm from Bikiy's
     Batch Active Learning from Preferences paper.
@@ -133,13 +133,13 @@ def successive_elimination(
     assert (
         infogains.shape[0] == question_samples.shape[0]
     ), f"Infogains and question_samples shapes do not match {infogains.shape} != {question_samples.shape}"
-    indices = np.argpartition(infogains, inital_questions - 1)[:inital_questions]
+    indices = np.argpartition(infogains, initial_questions - 1)[:initial_questions]
 
     greedy_questions = question_samples[indices]
 
     dists = pairwise_distances(greedy_questions, metric="euclidean")
 
-    # Every question is distance 0 to itself, but we don't want to consider that a real distance.
+    # We only care about pairs of distinct questions.
     dists[np.where(np.eye(dists.shape[0]))] = np.inf
 
     while len(indices) > n_out_questions:

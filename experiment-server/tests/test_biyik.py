@@ -24,7 +24,11 @@ def test_infogain_nonnegative(rewards: np.ndarray, halfplanes: np.ndarray):
 @given(rewards=rewards_strategy(), questions=halfplanes_strategy())
 def test_successive_elimination_noop(rewards: np.ndarray, questions: np.ndarray):
     n_questions = questions.shape[0]
-    final_questions = successive_elimination(
-        rewards, questions, n_out_questions=n_questions, inital_questions=n_questions
+    indices = successive_elimination(
+        reward_samples=rewards,
+        question_samples=questions,
+        n_out_questions=n_questions,
+        initial_questions=n_questions,
     )
+    final_questions = questions[np.sort(indices)]
     assert np.array_equal(questions, final_questions)
