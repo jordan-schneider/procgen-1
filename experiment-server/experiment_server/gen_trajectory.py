@@ -1,6 +1,5 @@
 import logging
-from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 import gym3  # type: ignore
 import numpy as np
@@ -9,49 +8,8 @@ from linear_procgen.feature_envs import FeatureEnv
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES_T
 
+from experiment_server.types import DataModality, FeatureTrajectory, State, Trajectory
 from experiment_server.util import remove_duplicates, remove_zeros
-
-
-@dataclass
-class State:
-    grid: np.ndarray
-    agent_pos: Tuple[int, int]
-    exit_pos: Tuple[int, int]
-
-    def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, State)
-            and np.array_equal(self.grid, other.grid)
-            and self.agent_pos == other.agent_pos
-            and self.exit_pos == other.exit_pos
-        )
-
-
-@dataclass
-class Trajectory:
-    start_state: State
-    actions: Optional[np.ndarray]
-    env_name: str
-
-    def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, Trajectory)
-            and self.start_state == other.start_state
-            and np.array_equal(self.actions, other.actions)  # type: ignore array_equal works with None
-            and self.env_name == other.env_name
-        )
-
-
-@dataclass
-class FeatureTrajectory(Trajectory):
-    features: np.ndarray
-
-    def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, FeatureTrajectory)
-            and super().__eq__(other)
-            and np.array_equal(self.features, other.features)
-        )
 
 
 def collect_trajs(
@@ -59,6 +17,7 @@ def collect_trajs(
     env_name: ENV_NAMES_T,
     policy: Callable[[np.ndarray], np.ndarray],
     num_trajs: int,
+    modality: DataModality,
     n_actions: int = -1,
 ) -> List[Trajectory]:
     out: List[Trajectory] = []
@@ -76,7 +35,7 @@ def collect_trajs(
             obs, reward, first = env.observe()
             if not first:
                 actions.append(action)
-        out.append(Trajectory(start_state, np.stack(actions), env_name))
+        out.append(Trajectory(start_state, np.stack(actions), env_name, modality))
     return out
 
 
@@ -85,6 +44,7 @@ def collect_feature_trajs(
     env_name: FEATURE_ENV_NAMES,
     policy: Callable[[np.ndarray], np.ndarray],
     num_trajs: int,
+    modality: DataModality,
     n_actions: int = -1,
 ) -> List[FeatureTrajectory]:
     root_env = get_root_env(env)
@@ -112,6 +72,7 @@ def collect_feature_trajs(
                 start_state,
                 np.stack(actions) if actions else None,
                 env_name,
+                modality,
                 np.stack(features),
             )
         )

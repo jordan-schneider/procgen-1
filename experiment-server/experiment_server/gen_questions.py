@@ -7,7 +7,7 @@ import fire  # type: ignore
 import numpy as np
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
-from procgen.env import ENV_NAMES, ProcgenGym3Env
+from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 
 from experiment_server.biyik import successive_elimination
 from experiment_server.gen_trajectory import (
@@ -17,9 +17,8 @@ from experiment_server.gen_trajectory import (
     compute_diffs,
 )
 from experiment_server.random_policy import RandomGridPolicy
+from experiment_server.types import DataModality
 from experiment_server.util import setup_logging
-
-QuestionType = Literal["state", "action", "traj"]
 
 
 def init_db(db_path: Path, schema_path: Path):
@@ -31,9 +30,7 @@ def init_db(db_path: Path, schema_path: Path):
     conn.close()
 
 
-def insert_traj(
-    conn: sqlite3.Connection, traj: Trajectory, modality: QuestionType
-) -> int:
+def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
     c = conn.execute(
         "INSERT INTO trajectories (start_state, actions, length, env, modality) VALUES (:start_state, :actions, :length, :env, :modality)",
         {
@@ -41,7 +38,7 @@ def insert_traj(
             "actions": pickle.dumps(traj.actions),
             "length": len(traj.actions) if traj.actions is not None else 0,
             "env": traj.env_name,
-            "modality": modality,
+            "modality": traj.modality,
         },
     )
     return int(c.lastrowid)
@@ -51,21 +48,21 @@ def insert_question(
     conn: sqlite3.Connection,
     traj_ids: Tuple[int, int],
     algo: Literal["random", "infogain"],
-    modality: QuestionType,
+    env_name: str,
 ) -> int:
     c = conn.execute(
-        "INSERT INTO questions (first_id, second_id, modality, algorithm) VALUES (:first_id, :second_id, :modality, :algo)",
+        "INSERT INTO questions (first_id, second_id, algorithm, env) VALUES (:first_id, :second_id, :algo, :env)",
         {
             "first_id": traj_ids[0],
             "second_id": traj_ids[1],
-            "modality": modality,
             "algo": algo,
+            "env": env_name,
         },
     )
     return int(c.lastrowid)
 
 
-def correct_n_actions(question_type: QuestionType, n_actions: int) -> int:
+def correct_n_actions(question_type: DataModality, n_actions: int) -> int:
     if question_type == "state":
         return 0
     elif question_type == "action":
@@ -78,10 +75,10 @@ def correct_n_actions(question_type: QuestionType, n_actions: int) -> int:
 
 def gen_random_questions(
     db_path: Path,
-    env: ENV_NAMES,
+    env: ENV_NAMES_T,
     num_questions: int,
-    question_type: QuestionType,
-    n_actions: Optional[int] = 10,
+    question_type: DataModality,
+    n_actions: int = 10,
     seed: int = 0,
     verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
@@ -99,15 +96,16 @@ def gen_random_questions(
             env_name,
             policy=RandomGridPolicy(env, np.random.default_rng(seed)),
             num_trajs=num_questions * 2,
+            modality=question_type,
             n_actions=n_actions,
         )
 
         for traj_1, traj_2 in zip(trajs[::2], trajs[1::2]):
             if traj_1 == traj_2:
                 continue
-            traj_1_id = insert_traj(conn, traj_1, question_type)
-            traj_2_id = insert_traj(conn, traj_2, question_type)
-            insert_question(conn, (traj_1_id, traj_2_id), "random", question_type)
+            traj_1_id = insert_traj(conn, traj_1)
+            traj_2_id = insert_traj(conn, traj_2)
+            insert_question(conn, (traj_1_id, traj_2_id), "random", env_name)
             questions += 1
     conn.commit()
     conn.close()
@@ -118,12 +116,12 @@ def gen_batch_infogain_questions(
     true_reward_path: Path,
     env: FEATURE_ENV_NAMES,
     num_questions: int,
-    question_type: QuestionType,
+    question_type: DataModality,
     num_reward_samples: int,
     init_questions: int,
     num_trajs: int,
     reward_variance: float = 0.01,
-    n_actions: Optional[int] = 10,
+    n_actions: int = 10,
     seed: int = 0,
     verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
@@ -159,9 +157,9 @@ def gen_batch_infogain_questions(
     )
     # np array over questions for scalar list index
     for traj_1, traj_2 in np.array(questions)[indices]:
-        traj_1_id = insert_traj(conn, traj_1, question_type)
-        traj_2_id = insert_traj(conn, traj_2, question_type)
-        insert_question(conn, (traj_1_id, traj_2_id), "infogain", question_type)
+        traj_1_id = insert_traj(conn, traj_1)
+        traj_2_id = insert_traj(conn, traj_2)
+        insert_question(conn, (traj_1_id, traj_2_id), "infogain", env_name)
     conn.commit()
     conn.close()
 

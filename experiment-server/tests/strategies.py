@@ -1,8 +1,9 @@
 import numpy as np
-from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import composite, floats, integers
+from experiment_server.types import FeatureTrajectory, State, Trajectory
+from hypothesis.extra.numpy import array_shapes, arrays
+from hypothesis.strategies import characters, composite, floats, integers, tuples
 
-seed = integers(0, 2**32 - 1)
+seeds = integers(0, 2**32 - 1)
 
 small_int_strategy = integers(1, 5)
 
@@ -35,3 +36,42 @@ def rewards_strategy(draw, n_rewards=small_int_strategy):
         .filter(lambda r: np.linalg.norm(r) > 0.0)
         .map(lambda r: r / np.linalg.norm(r))
     )
+
+
+@composite
+def states(draw, max_grid_size: int = 10) -> State:
+    grid_size = draw(integers(min_value=1, max_value=max_grid_size))
+    grid = draw(
+        arrays(dtype=np.int32, shape=(grid_size, grid_size), elements=integers(1, 100))
+    )
+    pos_val = integers(min_value=0, max_value=grid_size - 1)
+    position = tuples(pos_val, pos_val)
+    agent_pos = draw(position)
+    exit_pos = draw(position)
+    return State(grid, agent_pos, exit_pos)
+
+
+actions = arrays(
+    dtype=np.int32, shape=array_shapes(max_dims=1), elements=integers(0, 4)
+)
+
+
+@composite
+def trajs(draw, states, action_strategy):
+    start_state = draw(states)
+    actions = draw(action_strategy)
+    env_name = draw(characters())
+    modality = draw(characters())
+    return Trajectory(start_state, actions, env_name, modality)
+
+
+@composite
+def feature_trajs(draw, states, action_strategy):
+    start_state = draw(states)
+    actions = draw(action_strategy)
+    env_name = draw(characters())
+    modality = draw(characters())
+    features = draw(
+        arrays(dtype=np.float32, shape=(actions.shape[0], 4), elements=floats_1000)
+    )
+    return FeatureTrajectory(start_state, actions, env_name, modality, features)

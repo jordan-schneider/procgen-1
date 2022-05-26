@@ -5,7 +5,7 @@ from hypothesis import given
 from linear_procgen import make_env
 from procgen import ProcgenGym3Env
 
-from .strategies import seed as seed_strategy
+from .strategies import seeds as seed_strategy
 
 
 def test_throws_on_nongrid_env():
