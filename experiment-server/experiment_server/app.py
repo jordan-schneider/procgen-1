@@ -1,12 +1,11 @@
 import flask
-from flask import Flask, jsonify, render_template, request, url_for
+from flask import Flask, jsonify, render_template, request
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/assets")
 
 
 @app.route("/")
 def main():
-    url_for("static", filename="script.js")
     return render_template("index.html")
 
 
