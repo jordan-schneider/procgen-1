@@ -16,6 +16,13 @@ nonzero_arrays = arrays(dtype=np.float32, shape=(5, 4), elements=floats_1000).fi
 )
 
 
+def min_magnitude(vecs: np.ndarray) -> float:
+    tmp_vecs = np.copy(vecs)
+    tmp_vecs[tmp_vecs == 0.0] = np.max(np.abs(tmp_vecs))
+    sensitivity = np.min(np.abs(tmp_vecs)) / 2
+    return sensitivity
+
+
 @composite
 def arrays_insert(draw, arrays):
     vecs = draw(arrays)
@@ -25,19 +32,15 @@ def arrays_insert(draw, arrays):
 
 @given(vecs=unique_arrays)
 def test_remove_duplicates_noop(vecs: np.ndarray):
-    assert np.array_equal(vecs, remove_duplicates(vecs)[0])
+    sensitivity = min_magnitude(vecs)
+    assert np.array_equal(vecs, remove_duplicates(vecs, sensitivity)[0])
 
 
 @given(vecs_and_insert=arrays_insert(arrays=unique_arrays), n_duplicates=integers(1, 5))
 def test_remove_duplicates(vecs_and_insert: Tuple[np.ndarray, int], n_duplicates: int):
     vecs, start_index = vecs_and_insert
     dup_vecs = np.insert(vecs, start_index, np.tile(vecs[0], (n_duplicates, 1)), axis=0)
-    # Get the smallest exponent of any value
-    tmp_vecs = np.copy(vecs)
-    tmp_vecs[tmp_vecs == 0.0] = np.max(np.abs(tmp_vecs))
-    sensitivity = np.min(np.abs(tmp_vecs)) / 2
-
-    out_vecs, indices = remove_duplicates(dup_vecs, sensitivity)
+    out_vecs, indices = remove_duplicates(dup_vecs, min_magnitude(vecs))
     assert np.array_equal(dup_vecs[np.sort(indices)], vecs)
 
 
