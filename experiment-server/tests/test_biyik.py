@@ -4,7 +4,7 @@ from experiment_server.util import remove_duplicates
 from hypothesis import given
 from hypothesis.strategies import integers
 
-from strategies import halfplanes_strategy, rewards_strategy
+from .strategies import halfplanes_strategy, rewards_strategy
 
 
 @given(rewards=rewards_strategy(), halfplanes=halfplanes_strategy())

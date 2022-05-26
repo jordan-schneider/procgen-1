@@ -6,7 +6,7 @@ from hypothesis import given
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import composite, integers
 
-from strategies import floats_1000
+from .strategies import floats_1000
 
 unique_arrays = arrays(
     dtype=np.float32, shape=(5, 4), elements=floats_1000, unique=True

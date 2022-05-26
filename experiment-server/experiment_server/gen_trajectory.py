@@ -4,6 +4,7 @@ from typing import Callable, List, Tuple
 import gym3  # type: ignore
 import numpy as np
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
+from linear_procgen.feature_envs import FeatureEnv
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES_T
 
@@ -30,6 +31,14 @@ class Trajectory:
     start_state: State
     actions: np.ndarray
     env_name: str
+
+    def __eq__(self, other) -> bool:
+        return (
+            isinstance(other, Trajectory)
+            and self.start_state == other.start_state
+            and np.array_equal(self.actions, other.actions)
+            and self.env_name == other.env_name
+        )
 
 
 @dataclass
@@ -78,6 +87,7 @@ def collect_feature_trajs(
     n_actions: int = -1,
 ) -> List[FeatureTrajectory]:
     root_env = get_root_env(env)
+    assert isinstance(root_env, FeatureEnv)
     out: List[FeatureTrajectory] = []
     for _ in range(num_trajs):
         obs, reward, first = env.observe()
