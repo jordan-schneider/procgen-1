@@ -10,12 +10,9 @@ from linear_procgen import make_env
 from procgen.env import ENV_NAMES, ProcgenGym3Env
 
 from experiment_server.biyik import successive_elimination
-from experiment_server.gen_trajectory import (
-    Trajectory,
-    collect_feature_questions,
-    collect_trajs,
-    compute_diffs,
-)
+from experiment_server.gen_trajectory import (Trajectory,
+                                              collect_feature_questions,
+                                              collect_trajs, compute_diffs)
 from experiment_server.random_policy import RandomGridPolicy
 from experiment_server.util import setup_logging
 
@@ -39,7 +36,7 @@ def insert_traj(
         {
             "start_state": pickle.dumps(traj.start_state),
             "actions": pickle.dumps(traj.actions),
-            "length": len(traj.actions),
+            "length": len(traj.actions) if traj.actions is not None else 0,
             "env": traj.env_name,
             "modality": modality,
         },

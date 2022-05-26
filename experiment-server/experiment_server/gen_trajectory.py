@@ -1,5 +1,6 @@
+import logging
 from dataclasses import dataclass
-from typing import Callable, List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import gym3  # type: ignore
 import numpy as np
@@ -29,14 +30,14 @@ class State:
 @dataclass
 class Trajectory:
     start_state: State
-    actions: np.ndarray
+    actions: Optional[np.ndarray]
     env_name: str
 
     def __eq__(self, other) -> bool:
         return (
             isinstance(other, Trajectory)
             and self.start_state == other.start_state
-            and np.array_equal(self.actions, other.actions)
+            and np.array_equal(self.actions, other.actions)  # type: ignore array_equal works with None
             and self.env_name == other.env_name
         )
 
@@ -105,9 +106,13 @@ def collect_feature_trajs(
             if not first:
                 actions.append(action)
                 features.append(root_env.make_features()[0])
+        logging.debug(f"actions={actions}, features={features}")
         out.append(
             FeatureTrajectory(
-                start_state, np.stack(actions), env_name, np.stack(features)
+                start_state,
+                np.stack(actions) if actions else None,
+                env_name,
+                np.stack(features),
             )
         )
     return out
