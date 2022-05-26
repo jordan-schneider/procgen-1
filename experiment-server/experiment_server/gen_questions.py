@@ -3,16 +3,19 @@ import sqlite3
 from pathlib import Path
 from typing import Literal, Optional, Tuple
 
-import fire
+import fire  # type: ignore
 import numpy as np
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES, ProcgenGym3Env
 
 from experiment_server.biyik import successive_elimination
-from experiment_server.gen_trajectory import (Trajectory,
-                                              collect_feature_questions,
-                                              collect_trajs, compute_diffs)
+from experiment_server.gen_trajectory import (
+    Trajectory,
+    collect_feature_questions,
+    collect_trajs,
+    compute_diffs,
+)
 from experiment_server.random_policy import RandomGridPolicy
 from experiment_server.util import setup_logging
 
