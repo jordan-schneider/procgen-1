@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Callable, List, Tuple
 
-import gym3
+import gym3  # type: ignore
 import numpy as np
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen.util import get_root_env
-from procgen.env import ENV_NAMES
+from procgen.env import ENV_NAMES_T
 
 from experiment_server.util import remove_duplicates, remove_zeros
 
@@ -28,7 +28,7 @@ class State:
 @dataclass
 class Trajectory:
     start_state: State
-    actions: List[int]
+    actions: np.ndarray
     env_name: str
 
 
@@ -46,8 +46,8 @@ class FeatureTrajectory(Trajectory):
 
 def collect_trajs(
     env: gym3.Env,
-    env_name: ENV_NAMES,
-    policy: Callable[[np.ndarray], int],
+    env_name: ENV_NAMES_T,
+    policy: Callable[[np.ndarray], np.ndarray],
     num_trajs: int,
     n_actions: int = -1,
 ) -> List[Trajectory]:
@@ -58,7 +58,7 @@ def collect_trajs(
         start_state = State(
             grid=info["grid"], agent_pos=info["agent_pos"], exit_pos=info["exit_pos"]
         )
-        actions = []
+        actions: List[np.ndarray] = []
         first = False
         while not first and (actions == -1 or len(actions) <= n_actions):
             action = policy(obs)
@@ -66,14 +66,14 @@ def collect_trajs(
             obs, reward, first = env.observe()
             if not first:
                 actions.append(action)
-        out.append(Trajectory(start_state, actions, env_name))
+        out.append(Trajectory(start_state, np.stack(actions), env_name))
     return out
 
 
 def collect_feature_trajs(
     env: gym3.Env,
     env_name: FEATURE_ENV_NAMES,
-    policy: Callable[[np.ndarray], int],
+    policy: Callable[[np.ndarray], np.ndarray],
     num_trajs: int,
     n_actions: int = -1,
 ) -> List[FeatureTrajectory]:
@@ -85,7 +85,7 @@ def collect_feature_trajs(
         start_state = State(
             grid=info["grid"], agent_pos=info["agent_pos"], exit_pos=info["exit_pos"]
         )
-        actions = []
+        actions: List[np.ndarray] = []
         features = [root_env.make_features()[0]]
         first = False
         while not first and (n_actions == -1 or len(actions) <= n_actions):
@@ -96,7 +96,9 @@ def collect_feature_trajs(
                 actions.append(action)
                 features.append(root_env.make_features()[0])
         out.append(
-            FeatureTrajectory(start_state, actions, env_name, np.stack(features))
+            FeatureTrajectory(
+                start_state, np.stack(actions), env_name, np.stack(features)
+            )
         )
     return out
 
@@ -115,12 +117,12 @@ def compute_diffs(
 def collect_feature_questions(
     env: gym3.Env,
     env_name: FEATURE_ENV_NAMES,
-    policy: Callable[[np.ndarray], int],
+    policy: Callable[[np.ndarray], np.ndarray],
     n_questions: int,
     batch_size: int,
     n_actions: int = -1,
-) -> np.ndarray:
-    questions = []
+) -> List[Tuple[FeatureTrajectory, FeatureTrajectory]]:
+    questions: List[Tuple[FeatureTrajectory, FeatureTrajectory]] = []
 
     while len(questions) < n_questions:
         trajs = collect_feature_trajs(env, env_name, policy, batch_size, n_actions)

@@ -84,11 +84,13 @@ def remove_zeros(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return vecs[indices], indices
 
 
-def remove_duplicates(vecs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    unique = vecs[0]
+def remove_duplicates(
+    vecs: np.ndarray, sensitivity: float = 1e-4
+) -> Tuple[np.ndarray, np.ndarray]:
+    unique = vecs[0].reshape(1, -1)
     indices = [0]
     for i, vec in enumerate(vecs[1:]):
-        if not np.any(np.linalg.norm(unique - vec) < 1e-4):
+        if not np.any(np.linalg.norm(unique - vec, axis=1) <= sensitivity):
             unique = np.vstack((unique, vec))
             indices.append(i + 1)
     return unique, np.array(indices)

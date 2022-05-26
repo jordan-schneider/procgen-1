@@ -1,7 +1,8 @@
 import logging
+from typing import Tuple
 
 import numpy as np
-from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics.pairwise import pairwise_distances  # type: ignore
 
 from experiment_server.logspace import log_normalize_logs
 
@@ -99,7 +100,7 @@ def infogain(feature_diffs: np.ndarray, reward_posterior: np.ndarray) -> np.ndar
     normalized_log_likelihoods = tuple(
         log_normalize_logs(log_likelihoods[i]) for i in range(2)
     )
-    infogains = tuple(
+    infogains: Tuple[np.ndarray, ...] = tuple(
         np.sum(
             np.exp2(log_likelihoods[i])
             * (normalized_log_likelihoods[i] + np.log2(n_reward_samples)),
@@ -108,7 +109,7 @@ def infogain(feature_diffs: np.ndarray, reward_posterior: np.ndarray) -> np.ndar
         for i in range(2)
     )
 
-    return sum(infogains) / n_reward_samples
+    return (infogains[0] + infogains[1]) / n_reward_samples
 
 
 def successive_elimination(
@@ -129,6 +130,8 @@ def successive_elimination(
     Returns:
         np.ndarray: Index array of selected questions.
     """
+    assert n_out_questions >= 1
+    assert question_samples.shape[0] >= n_out_questions
     infogains = infogain(question_samples, reward_samples)
     assert (
         infogains.shape[0] == question_samples.shape[0]
