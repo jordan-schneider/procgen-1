@@ -1,7 +1,17 @@
-import gym3
+import gym3  # type: ignore
 import numpy as np
 from linear_procgen.util import get_root_env
 from numpy.random import Generator
+
+
+class RandomPolicy:
+    def __init__(self, env: gym3.Env, rng: Generator) -> None:
+        self.actions = env.ac_space.eltype.n
+        self.num = env.num
+        self.rng = rng
+
+    def __call__(self, ob) -> np.ndarray:
+        return self.rng.integers(low=0, high=self.actions - 1, size=(self.num,))
 
 
 class RandomGridPolicy:

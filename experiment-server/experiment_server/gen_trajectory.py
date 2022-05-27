@@ -25,16 +25,20 @@ def collect_trajs(
         obs, reward, first = env.observe()
         info = env.get_info()[0]
         start_state = State(
-            grid=info["grid"], agent_pos=info["agent_pos"], exit_pos=info["exit_pos"]
+            grid=info["grid"],
+            grid_width=info["grid_size"][0],
+            grid_height=info["grid_size"][1],
+            agent_pos=info["agent_pos"],
+            exit_pos=info["exit_pos"],
         )
         actions: List[np.ndarray] = []
         first = False
-        while not first and (actions == -1 or len(actions) <= n_actions):
+        while not first and (n_actions == -1 or len(actions) < n_actions):
             action = policy(obs)
             env.act(action)
             obs, reward, first = env.observe()
             if not first:
-                actions.append(action)
+                actions.append(action[0])
         out.append(Trajectory(start_state, np.stack(actions), env_name, modality))
     return out
 
@@ -54,17 +58,21 @@ def collect_feature_trajs(
         obs, reward, first = env.observe()
         info = env.get_info()[0]
         start_state = State(
-            grid=info["grid"], agent_pos=info["agent_pos"], exit_pos=info["exit_pos"]
+            grid=info["grid"],
+            grid_width=info["grid_width"],
+            grid_height=info["grid_height"],
+            agent_pos=info["agent_pos"],
+            exit_pos=info["exit_pos"],
         )
         actions: List[np.ndarray] = []
         features = [root_env.make_features()[0]]
         first = False
-        while not first and (n_actions == -1 or len(actions) <= n_actions):
+        while not first and (n_actions == -1 or len(actions) < n_actions):
             action = policy(obs)
             env.act(action)
             obs, reward, first = env.observe()
             if not first:
-                actions.append(action)
+                actions.append(action[0])
                 features.append(root_env.make_features()[0])
         logging.debug(f"actions={actions}, features={features}")
         out.append(

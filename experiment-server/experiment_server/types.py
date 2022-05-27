@@ -9,6 +9,8 @@ DataModality = Literal["state", "action", "traj"]
 @dataclass
 class State:
     grid: np.ndarray
+    grid_width: int
+    grid_height: int
     agent_pos: Tuple[int, int]
     exit_pos: Tuple[int, int]
 
@@ -16,6 +18,8 @@ class State:
         return (
             isinstance(other, State)
             and np.array_equal(self.grid, other.grid)
+            and self.grid_width == other.grid_width
+            and self.grid_height == other.grid_height
             and self.agent_pos == other.agent_pos
             and self.exit_pos == other.exit_pos
         )

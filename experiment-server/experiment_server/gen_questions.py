@@ -1,7 +1,7 @@
 import pickle
 import sqlite3
 from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Literal, Tuple
 
 import fire  # type: ignore
 import numpy as np
@@ -16,7 +16,7 @@ from experiment_server.gen_trajectory import (
     collect_trajs,
     compute_diffs,
 )
-from experiment_server.random_policy import RandomGridPolicy
+from experiment_server.random_policy import RandomGridPolicy, RandomPolicy
 from experiment_server.types import DataModality
 from experiment_server.util import setup_logging
 
@@ -31,6 +31,7 @@ def init_db(db_path: Path, schema_path: Path):
 
 
 def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
+    # TODO: Swap pickle for dill
     c = conn.execute(
         "INSERT INTO trajectories (start_state, actions, length, env, modality) VALUES (:start_state, :actions, :length, :env, :modality)",
         {
@@ -94,7 +95,7 @@ def gen_random_questions(
         trajs = collect_trajs(
             env,
             env_name,
-            policy=RandomGridPolicy(env, np.random.default_rng(seed)),
+            policy=RandomPolicy(env, np.random.default_rng(seed)),
             num_trajs=num_questions * 2,
             modality=question_type,
             n_actions=n_actions,

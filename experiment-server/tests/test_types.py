@@ -37,12 +37,26 @@ def test_state_neq_primitives(
 
 @given(state=states(max_grid_size=20))
 def test_state_neq_other_state(state: State):
-    state1 = State(state.grid + 1, state.agent_pos, state.exit_pos)
+    state1 = State(
+        state.grid + 1,
+        state.grid_width,
+        state.grid_height,
+        state.agent_pos,
+        state.exit_pos,
+    )
     state2 = State(
-        state.grid, (state.agent_pos[0] + 1, state.agent_pos[1]), state.exit_pos
+        state.grid,
+        state.grid_width,
+        state.grid_height,
+        (state.agent_pos[0] + 1, state.agent_pos[1]),
+        state.exit_pos,
     )
     state3 = State(
-        state.grid, state.agent_pos, (state.exit_pos[0] + 1, state.exit_pos[1])
+        state.grid,
+        state.grid_width,
+        state.grid_height,
+        state.agent_pos,
+        (state.exit_pos[0] + 1, state.exit_pos[1]),
     )
 
     assert state != state1
@@ -59,31 +73,33 @@ def test_traj_eq_reflexive(traj: Trajectory):
 def test_traj_neq_other_traj(
     traj: Trajectory,
 ):
-    grid, agent_pos, exit_pos = dataclasses.astuple(traj.start_state)
+    grid, grid_width, grid_height, agent_pos, exit_pos = dataclasses.astuple(
+        traj.start_state
+    )
     actions = traj.actions
     assert actions is not None
     env_name = traj.env_name
     modality = traj.modality
     traj1 = Trajectory(
-        start_state=State(grid + 1, agent_pos, exit_pos),
+        start_state=State(grid + 1, grid_width, grid_height, agent_pos, exit_pos),
         actions=actions,
         env_name=env_name,
         modality=modality,
     )
     traj2 = Trajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions + 1,
         env_name=env_name,
         modality=modality,
     )
     traj3 = Trajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions,
         env_name=env_name + "hello world",
         modality=modality,
     )
     traj4 = Trajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions,
         env_name=env_name,
         modality=modality + "hello world",
@@ -126,42 +142,44 @@ def test_feature_traj_eq_reflexive(traj: FeatureTrajectory):
 def test_feature_traj_neq_other_traj(
     traj: FeatureTrajectory,
 ):
-    grid, agent_pos, exit_pos = dataclasses.astuple(traj.start_state)
+    grid, grid_width, grid_height, agent_pos, exit_pos = dataclasses.astuple(
+        traj.start_state
+    )
     actions = traj.actions
     assert actions is not None
     env_name = traj.env_name
     modality = traj.modality
     features = traj.features
     traj1 = FeatureTrajectory(
-        start_state=State(grid + 1, agent_pos, exit_pos),
+        start_state=State(grid + 1, grid_width, grid_height, agent_pos, exit_pos),
         actions=actions,
         env_name=env_name,
         features=features,
         modality=modality,
     )
     traj2 = FeatureTrajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions + 1,
         env_name=env_name,
         features=features,
         modality=modality,
     )
     traj3 = FeatureTrajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions,
         env_name=env_name + "hello world",
         features=features,
         modality=modality,
     )
     traj4 = FeatureTrajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions,
         env_name=env_name,
         features=features / 2 + 1,
         modality=modality,
     )
     traj5 = FeatureTrajectory(
-        start_state=State(grid, agent_pos, exit_pos),
+        start_state=traj.start_state,
         actions=actions,
         env_name=env_name,
         features=features,
