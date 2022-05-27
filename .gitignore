@@ -110,5 +110,13 @@ venv.bak/
 .ccls-cache
 
 # Flask
-static/
-templates/
+*.png
+env.js
+cheese.textClipping
+
+scratch.py
+
+settings.json
+*.code-workspace
+
+*.db
