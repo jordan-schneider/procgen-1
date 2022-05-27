@@ -25,5 +25,5 @@ CREATE TABLE IF NOT EXISTS answers(
   question_id INT NOT NULL,
   answer INT NOT NULL,
   start_time TEXT NOT NULL,
-  stop_time TEXT NOT NULL
+  end_time TEXT NOT NULL
 );

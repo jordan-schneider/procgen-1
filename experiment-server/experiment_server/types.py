@@ -54,4 +54,17 @@ class FeatureTrajectory(Trajectory):
         )
 
 
-Question = Tuple[Trajectory, Trajectory]
+@dataclass
+class Question:
+    id: int
+    first_traj: Trajectory
+    second_traj: Trajectory
+
+
+@dataclass
+class Answer:
+    user_id: int
+    question_id: int
+    answer: bool
+    start_time: str
+    end_time: str

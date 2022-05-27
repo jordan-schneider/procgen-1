@@ -382,7 +382,7 @@ class MinerGame : public BasicAbstractGame {
         auto miner_state = static_cast<client::MinerState *>(state);
         auto grid_vals = miner_state->get_grid();
 
-        for (int idx = 0; idx < grid_vals->get_length(); idx++) {
+        for (int idx = 0; idx < miner_state->get_grid_width() * miner_state->get_grid_height(); idx++) {
             set_obj(idx, (*grid_vals)[idx]);
         }
 

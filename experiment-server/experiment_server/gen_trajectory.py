@@ -26,13 +26,15 @@ def collect_trajs(
         info = env.get_info()[0]
         start_state = State(
             grid=info["grid"],
-            grid_width=info["grid_size"][0],
-            grid_height=info["grid_size"][1],
+            grid_width=int(info["grid_size"][0]),
+            grid_height=int(info["grid_size"][1]),
             agent_pos=info["agent_pos"],
             exit_pos=info["exit_pos"],
         )
+        logging.debug(start_state.grid.shape)
         actions: List[np.ndarray] = []
         first = False
+        # TODO: Do I want to reset the env if we run out of time? Comparing the start to the middle of the same traj is kind of boring
         while not first and (n_actions == -1 or len(actions) < n_actions):
             action = policy(obs)
             env.act(action)
@@ -59,8 +61,8 @@ def collect_feature_trajs(
         info = env.get_info()[0]
         start_state = State(
             grid=info["grid"],
-            grid_width=info["grid_width"],
-            grid_height=info["grid_height"],
+            grid_width=int(info["grid_width"]),
+            grid_height=int(info["grid_height"]),
             agent_pos=info["agent_pos"],
             exit_pos=info["exit_pos"],
         )

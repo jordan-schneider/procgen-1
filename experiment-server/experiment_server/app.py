@@ -1,11 +1,12 @@
 import sqlite3
 from typing import cast
 
+import arrow
 from flask import Flask, g, jsonify, render_template, request
 
-from experiment_server.query import get_random_question
+from experiment_server.query import get_random_question, submit_answer
 from experiment_server.serialize import serialize
-from experiment_server.types import DataModality
+from experiment_server.types import Answer, DataModality
 
 app = Flask(__name__, static_url_path="/assets")
 DATABASE = (
@@ -22,7 +23,7 @@ def get_db():
 
 @app.route("/")
 def main():
-    return render_template("index.html")
+    return render_template("replay.html")
 
 
 @app.route("/submit", methods=["POST"])
@@ -30,10 +31,17 @@ def ingest():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
-    if json is None:
-        return jsonify({"error": "Invalid JSON"}), 400
-    print(json["message"])
-    return "OK"
+    submit_answer(
+        get_db(),
+        Answer(
+            user_id=0,
+            question_id=json["id"],
+            answer=json["answer"] == "right",
+            start_time=arrow.now().isoformat(),
+            end_time=arrow.now().isoformat(),
+        ),
+    )
+    return jsonify({"success": True})
 
 
 @app.route("/question", methods=["GET"])

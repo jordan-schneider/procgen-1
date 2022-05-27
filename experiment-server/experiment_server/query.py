@@ -1,7 +1,7 @@
 import pickle
 import sqlite3
 
-from experiment_server.types import DataModality, Question, Trajectory
+from experiment_server.types import Answer, DataModality, Question, Trajectory
 
 
 def get_random_question(
@@ -52,11 +52,28 @@ def get_random_question(
         right_modality,
     ) = next(cursor)
     # TODO: Swap pickle for dill
-    return (
-        Trajectory(
+    return Question(
+        id=id,
+        first_traj=Trajectory(
             pickle.loads(left_start), pickle.loads(left_actions), env, left_modality
         ),
-        Trajectory(
+        second_traj=Trajectory(
             pickle.loads(right_start), pickle.loads(right_actions), env, right_modality
         ),
     )
+
+
+def submit_answer(conn: sqlite3.Connection, answer: Answer):
+    conn.execute(
+        """
+        INSERT INTO answers (user_id, question_id, answer, start_time, end_time) VALUES (:user_id, :question_id, :answer, :start_time, :end_time)
+        """,
+        {
+            "user_id": answer.user_id,
+            "question_id": answer.question_id,
+            "answer": answer.answer,
+            "start_time": answer.start_time,
+            "end_time": answer.end_time,
+        },
+    )
+    conn.commit()
