@@ -125,7 +125,8 @@ def submit_question():
     json = request.get_json()
     traj_ids: Tuple[int, int] = json["traj_ids"]  # type: ignore
 
-    insert_question(get_db(), traj_ids, "manual", "miner")
+    id = insert_question(get_db(), traj_ids, "manual", "miner")
+    return jsonify({"success": True, "question_id": id})
 
 
 @app.route("/login", methods=["POST"])
