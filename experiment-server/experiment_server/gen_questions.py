@@ -1,7 +1,6 @@
-import pickle
 import sqlite3
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Literal
 
 import fire  # type: ignore
 import numpy as np
@@ -11,11 +10,11 @@ from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 
 from experiment_server.biyik import successive_elimination
 from experiment_server.gen_trajectory import (
-    Trajectory,
     collect_feature_questions,
     collect_trajs,
     compute_diffs,
 )
+from experiment_server.query import insert_question, insert_traj
 from experiment_server.random_policy import RandomGridPolicy, RandomPolicy
 from experiment_server.types import DataModality
 from experiment_server.util import setup_logging
@@ -28,39 +27,6 @@ def init_db(db_path: Path, schema_path: Path):
     conn.executescript(schema)
     conn.commit()
     conn.close()
-
-
-def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
-    # TODO: Swap pickle for dill
-    c = conn.execute(
-        "INSERT INTO trajectories (start_state, actions, length, env, modality) VALUES (:start_state, :actions, :length, :env, :modality)",
-        {
-            "start_state": pickle.dumps(traj.start_state),
-            "actions": pickle.dumps(traj.actions),
-            "length": len(traj.actions) if traj.actions is not None else 0,
-            "env": traj.env_name,
-            "modality": traj.modality,
-        },
-    )
-    return int(c.lastrowid)
-
-
-def insert_question(
-    conn: sqlite3.Connection,
-    traj_ids: Tuple[int, int],
-    algo: Literal["random", "infogain"],
-    env_name: str,
-) -> int:
-    c = conn.execute(
-        "INSERT INTO questions (first_id, second_id, algorithm, env) VALUES (:first_id, :second_id, :algo, :env)",
-        {
-            "first_id": traj_ids[0],
-            "second_id": traj_ids[1],
-            "algo": algo,
-            "env": env_name,
-        },
-    )
-    return int(c.lastrowid)
 
 
 def correct_n_actions(question_type: DataModality, n_actions: int) -> int:

@@ -1,10 +1,16 @@
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, cast
 
 import numpy as np
 
 DataModality = Literal["state", "action", "traj"]
+QuestionAlgorithm = Literal["random", "infogain", "manual"]
 
+def assure_modality(modality: str) -> DataModality:
+    if not (modality == "state" or modality == "action" or modality == "traj"):
+        raise ValueError(f"Unknown modality: {modality}")
+    modality = cast(DataModality, modality)
+    return modality
 
 @dataclass
 class State:
@@ -68,3 +74,8 @@ class Answer:
     answer: bool
     start_time: str
     end_time: str
+
+# TODO: Decide what demographics might be interesting
+@dataclass
+class Demographics:
+    age: int

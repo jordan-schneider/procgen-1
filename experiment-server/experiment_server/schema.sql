@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS questions(
   env TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS users(
-  id INTEGER PRIMARY KEY,
-  mturk_id INT NOT NULL,
+  mturk_id INTEGER PRIMARY KEY NOT NULL,
   site_sequence INT NOT NULL,
   demographics BLOB NOT NULL
 );

@@ -120,3 +120,8 @@ settings.json
 *.code-workspace
 
 *.db
+
+node_modules
+**/static/*.js
+
+SECRETS.py
