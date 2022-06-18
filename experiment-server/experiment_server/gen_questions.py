@@ -104,13 +104,13 @@ def gen_batch_infogain_questions(
     env = make_env(env, num=1, reward=1)
 
     questions = collect_feature_questions(
-        env,
-        env_name,
-        RandomGridPolicy(env, rng),
-        init_questions,
-        num_trajs,
-        question_type,
-        n_actions,
+        env=env,
+        env_name=env_name,
+        modality=question_type,
+        policy=RandomGridPolicy(env, rng),
+        n_questions=init_questions,
+        batch_size=num_trajs,
+        n_actions=n_actions,
     )
     question_diffs = compute_diffs(questions)
 

@@ -80,11 +80,11 @@ def collect_feature_trajs(
         logging.debug(f"actions={actions}, features={features}")
         out.append(
             FeatureTrajectory(
-                start_state,
-                np.stack(actions) if actions else None,
-                env_name,
-                modality,
-                np.stack(features),
+                start_state=start_state,
+                actions=np.stack(actions) if actions else None,
+                env_name=env_name,
+                modality=modality,
+                features=np.stack(features),
             )
         )
     return out
@@ -104,10 +104,10 @@ def compute_diffs(
 def collect_feature_questions(
     env: gym3.Env,
     env_name: FEATURE_ENV_NAMES,
+    modality: DataModality,
     policy: Callable[[np.ndarray], np.ndarray],
     n_questions: int,
     batch_size: int,
-    modality: DataModality,
     n_actions: int = -1,
 ) -> List[Tuple[FeatureTrajectory, FeatureTrajectory]]:
     questions: List[Tuple[FeatureTrajectory, FeatureTrajectory]] = []
