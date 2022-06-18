@@ -127,7 +127,7 @@ async function pauseLeft() {
   pause('left');
 }
 async function pauseRight() {
-  pause('left');
+  pause('right');
 }
 
 function play(side) {
@@ -145,7 +145,7 @@ async function playRight() {
 }
 
 function restart(side) {
-  index = getSideIndex(side);
+  const index = getSideIndex(side);
   gameStates[index].time = 0;
   gameStates[index].playState = 'paused';
   games[index].setState(gameStates[index].traj.start_state);
@@ -160,19 +160,12 @@ async function restartRight() {
 
 async function select(side) {
   stopTime = Date.now();
-  fetch('/submit', {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      id: question.id,
-      answer: side,
-      startTime,
-      stopTime,
-    }),
-  });
+  post('/submit_answer', JSON.stringify({
+    id: question.id,
+    answer: side,
+    startTime,
+    stopTime,
+  }));
   questionStarted = false;
   usedQuestions.push(question.id);
   await parseQuestion();
