@@ -1,4 +1,4 @@
-import { post } from '/assets/utils.js';
+import { post } from './utils.js';
 
 const games = [];
 let gameStates = null;
@@ -25,7 +25,7 @@ function parseOpts() {
 async function requestQuestion({
   env = 'miner', lengths = [10, 10], types = ['traj', 'traj'], excludeIds = [],
 } = {}) {
-  return post('/question', JSON.stringify({
+  return post('/random_question', JSON.stringify({
     env,
     lengths,
     types,

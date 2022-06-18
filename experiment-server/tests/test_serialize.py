@@ -1,11 +1,10 @@
-import sqlite3
-
-from experiment_server.app import DATABASE
-from experiment_server.query import get_random_question
+import numpy as np
 from experiment_server.serialize import serialize
+from experiment_server.type import Question, State, Trajectory
 
 
 def test_serialize_question():
-    conn = sqlite3.connect(DATABASE)
-    question = get_random_question(conn, question_type="traj", env="miner", length=10)
+    state = State(grid=np.eye(20), grid_height=20, grid_width=20, agent_pos=(0,0), exit_pos=(1,1))
+    traj = Trajectory(start_state=state, actions=np.arange(5), env_name="test", modality="traj")
+    question = Question(id=1, first_traj=traj, second_traj=traj)
     serialize(question)

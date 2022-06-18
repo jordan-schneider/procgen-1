@@ -2,19 +2,9 @@ import sqlite3
 from logging.config import dictConfig
 
 import arrow
-from flask import (
-    Flask,
-    g,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
+from flask import Flask, g, jsonify, render_template, request
 
 from experiment_server.query import (
-    create_user,
     get_random_question,
     insert_answer,
     insert_question,
@@ -22,13 +12,7 @@ from experiment_server.query import (
 )
 from experiment_server.SECRETS import SECRET_KEY
 from experiment_server.serialize import serialize
-from experiment_server.types import (
-    Answer,
-    Demographics,
-    Question,
-    Trajectory,
-    assure_modality,
-)
+from experiment_server.type import Answer, Trajectory, assure_modality
 
 dictConfig(
     {
@@ -73,13 +57,18 @@ def interact():
     return render_template("interact.html")
 
 
-@app.route("/submit", methods=["POST"])
-def submit():
+@app.route("/record")
+def record():
+    return render_template("record.html")
+
+
+@app.route("/submit_answer", methods=["POST"])
+def submit_answer():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
 
-    insert_answer(
+    id = insert_answer(
         get_db(),
         Answer(
             user_id=0,
@@ -90,11 +79,11 @@ def submit():
         ),
     )
 
-    return jsonify({"success": True})
+    return jsonify({"success": True, "answer_id": id})
 
 
-@app.route("/question", methods=["POST"])
-def request_question():
+@app.route("/random_question", methods=["POST"])
+def request_random_question():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
 
@@ -129,28 +118,8 @@ def submit_question():
     return jsonify({"success": True, "question_id": id})
 
 
-@app.route("/login", methods=["POST"])
-def login():
-    if request.method != "POST":
-        return jsonify({"error": "Method not allowed"}), 405
-
-    # TODO: Maybe this is unnecessary because we're not actually using ExternalQuestion
-    # TODO: Make sure this redirect works on preview. Consider just calling the function directly.
-    if request.args.get("assignmentId") == "ASSIGNMENT_ID_NOT_AVAILABLE":
-        return redirect(url_for("index"))
-
-    session["assignmentId"] = request.args.get("assignmentId")
-    session["hitId"] = request.args.get("hitId")
-    session["turkSubmitTo"] = request.args.get("turkSubmitTo")
-    session["workerId"] = request.args.get("workerId")
-
-    # TODO: Get demographics from mturk somehow
-    create_user(get_db(), session["workerId"], Demographics(age=-1))
-    return redirect(url_for("index"))
-
-
-@app.route("/record", methods=["POST"])
-def record():
+@app.route("/submit_trajectory", methods=["POST"])
+def submit_trajectory():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
@@ -166,16 +135,6 @@ def record():
     )
 
     return jsonify({"success": True, "trajectory_id": id})
-
-
-@app.route("/logout")
-def logout():
-    session.pop("assignmentId", None)
-    session.pop("hitId", None)
-    session.pop("turkSubmitTo", None)
-    session.pop("workerId", None)
-
-    # TODO: Whatever mturk wants me to return
 
 
 @app.teardown_appcontext

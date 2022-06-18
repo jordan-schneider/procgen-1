@@ -1,6 +1,6 @@
 import dataclasses
 
-from experiment_server.types import FeatureTrajectory, State, Trajectory
+from experiment_server.type import FeatureTrajectory, State, Trajectory
 from hypothesis import given
 from hypothesis.strategies import binary, booleans, characters, floats, integers
 

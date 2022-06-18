@@ -4,7 +4,8 @@
   "description": "",
   "private": true,
   "scripts": {
-    "build": "webpack"
+    "build": "webpack",
+    "deploy": "python -m flask run"
   },
   "author": "",
   "license": "ISC",

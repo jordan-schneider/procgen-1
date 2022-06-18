@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Procgen</title>
+</head>
+
+<body>
+	<div id="app"></div>
+
+	<script src="/assets/env.js"></script>
+	<script src="/assets/interact.js"></script>
+
+	<div id="controls">
+		<input id="startRecording" type="button" value="Start recording" onclick="startRecording();" />
+		<input id="submitRecord" type="button" value="Submit recording" onclick="submitRecording();" />
+		<input id="cancelRecording" type="button" value="Cancel recording" onclick="cancelRecording();" />
+	</div>
+	<div id="question">
+		<input id="firstTraj" type="checkbox" disabled />
+		<label for="firstTraj">First trajectory</label><br />
+		<input id="secondTraj" type="checkbox" disabled />
+		<label for="secondTraj">Second trajectory</label><br />
+
+		<label for="questionName">Question name</label>
+		<input id="questionName" type="text" value="" /><br />
+
+		<input id="submitQuestion" type="button" value="Clear question" onclick="clearQuestion();" />
+		<input id="submitQuestion" type="button" value="Submit question" onclick="submitQuestion();" />
+	</div>
+</body>
+
+</html>

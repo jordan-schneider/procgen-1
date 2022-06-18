@@ -8,7 +8,7 @@ from linear_procgen.feature_envs import FeatureEnv
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES_T
 
-from experiment_server.types import DataModality, FeatureTrajectory, State, Trajectory
+from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
 from experiment_server.util import remove_duplicates, remove_zeros
 
 
@@ -59,10 +59,11 @@ def collect_feature_trajs(
     for _ in range(num_trajs):
         obs, reward, first = env.observe()
         info = env.get_info()[0]
+        logging.debug(f"info={info}")
         start_state = State(
             grid=info["grid"],
-            grid_width=int(info["grid_width"]),
-            grid_height=int(info["grid_height"]),
+            grid_width=int(info["grid_size"][0]),
+            grid_height=int(info["grid_size"][1]),
             agent_pos=info["agent_pos"],
             exit_pos=info["exit_pos"],
         )
@@ -106,12 +107,20 @@ def collect_feature_questions(
     policy: Callable[[np.ndarray], np.ndarray],
     n_questions: int,
     batch_size: int,
+    modality: DataModality,
     n_actions: int = -1,
 ) -> List[Tuple[FeatureTrajectory, FeatureTrajectory]]:
     questions: List[Tuple[FeatureTrajectory, FeatureTrajectory]] = []
 
     while len(questions) < n_questions:
-        trajs = collect_feature_trajs(env, env_name, policy, batch_size, n_actions)
+        trajs = collect_feature_trajs(
+            env=env,
+            env_name=env_name,
+            policy=policy,
+            num_trajs=batch_size,
+            modality=modality,
+            n_actions=n_actions,
+        )
         questions.extend(zip(trajs[::2], trajs[1::2]))
         diffs = compute_diffs(questions)
         diffs, indices = remove_zeros(diffs)

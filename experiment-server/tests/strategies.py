@@ -1,5 +1,5 @@
 import numpy as np
-from experiment_server.types import FeatureTrajectory, State, Trajectory
+from experiment_server.type import FeatureTrajectory, State, Trajectory
 from hypothesis.extra.numpy import array_shapes, arrays
 from hypothesis.strategies import characters, composite, floats, integers, tuples
 

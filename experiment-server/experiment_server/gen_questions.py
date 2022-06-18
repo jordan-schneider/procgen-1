@@ -16,7 +16,7 @@ from experiment_server.gen_trajectory import (
 )
 from experiment_server.query import insert_question, insert_traj
 from experiment_server.random_policy import RandomGridPolicy, RandomPolicy
-from experiment_server.types import DataModality
+from experiment_server.type import DataModality
 from experiment_server.util import setup_logging
 
 
@@ -109,6 +109,7 @@ def gen_batch_infogain_questions(
         RandomGridPolicy(env, rng),
         init_questions,
         num_trajs,
+        question_type,
         n_actions,
     )
     question_diffs = compute_diffs(questions)

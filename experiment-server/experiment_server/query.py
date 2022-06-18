@@ -1,9 +1,9 @@
 import logging
 import pickle
 import sqlite3
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
-from experiment_server.types import (
+from experiment_server.type import (
     Answer,
     DataModality,
     Demographics,
@@ -18,8 +18,10 @@ def get_random_question(
     question_type: DataModality,
     env: str,
     length: int,
-    exclude_ids: Sequence[int],
+    exclude_ids: Optional[Sequence[int]] = None,
 ) -> Question:
+    if exclude_ids is None:
+        exclude_ids = []
     excl_list = ", ".join(f":excl_{i}" for i in range(len(exclude_ids)))
     excl_values = {f"excl_{i}": id for i, id in enumerate(exclude_ids)}
     query_s = f"""
@@ -97,6 +99,7 @@ def insert_answer(conn: sqlite3.Connection, answer: Answer) -> int:
             "end_time": answer.end_time,
         },
     )
+    assert cursor.lastrowid is not None
     out = int(cursor.lastrowid)
     conn.commit()
     return out
@@ -104,7 +107,7 @@ def insert_answer(conn: sqlite3.Connection, answer: Answer) -> int:
 
 def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
     # TODO: Swap pickle for dill
-    c = conn.execute(
+    cursor = conn.execute(
         "INSERT INTO trajectories (start_state, actions, length, env, modality) VALUES (:start_state, :actions, :length, :env, :modality)",
         {
             "start_state": pickle.dumps(traj.start_state),
@@ -114,7 +117,8 @@ def insert_traj(conn: sqlite3.Connection, traj: Trajectory) -> int:
             "modality": traj.modality,
         },
     )
-    out = int(c.lastrowid)
+    assert cursor.lastrowid is not None
+    out = int(cursor.lastrowid)
     conn.commit()
     return out
 
@@ -125,7 +129,7 @@ def insert_question(
     algo: QuestionAlgorithm,
     env_name: str,
 ) -> int:
-    c = conn.execute(
+    cursor = conn.execute(
         "INSERT INTO questions (first_id, second_id, algorithm, env) VALUES (:first_id, :second_id, :algo, :env)",
         {
             "first_id": traj_ids[0],
@@ -134,7 +138,8 @@ def insert_question(
             "env": env_name,
         },
     )
-    out = int(c.lastrowid)
+    assert cursor.lastrowid is not None
+    out = int(cursor.lastrowid)
     conn.commit()
     return out
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from experiment_server.random_policy import RandomGridPolicy
-from hypothesis import given
+from hypothesis import given, settings
 from linear_procgen import make_env
 from procgen import ProcgenGym3Env
 
@@ -14,6 +14,7 @@ def test_throws_on_nongrid_env():
         RandomGridPolicy(env, np.random.default_rng())
 
 
+@settings(deadline=None)
 @given(seed=seed_strategy)
 def test_policy_on_miner(seed: int):
     env = make_env("miner", num=1, reward=1)
@@ -23,6 +24,7 @@ def test_policy_on_miner(seed: int):
         env.act(policy(obs))
 
 
+@settings(deadline=None)
 @given(seed=seed_strategy)
 def test_policy_on_maze(seed: int):
     env = make_env("maze", num=1, reward=1)
