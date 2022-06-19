@@ -16,6 +16,7 @@ const int MOVING_DIAMOND = 4;
 const int ENEMY = 5;
 const int EXIT = 6;
 const int DIRT = 9;
+const int MUD = 11;
 
 const int OOB_WALL = 10;
 
@@ -51,6 +52,8 @@ class MinerGame : public BasicAbstractGame {
             names.push_back("misc_assets/window.png");
         } else if (type == DIRT) {
             names.push_back("misc_assets/dirt.png");
+        } else if (type == MUD) {
+            names.push_back("misc_assets/groundB.png");
         } else if (type == OOB_WALL) {
             names.push_back("misc_assets/tile_bricksGrey.png");
         }
@@ -143,11 +146,13 @@ class MinerGame : public BasicAbstractGame {
 
         float diamond_pct = 12 / 400.0f;
         float boulder_pct = 80 / 400.0f;
+        float mud_pct = 12 / 400.0f;
 
         int num_diamonds = (int)(diamond_pct * grid_size);
         int num_boulders = (int)(boulder_pct * grid_size);
+        int num_mud = (int)(mud_pct * grid_size);
 
-        std::vector<int> obj_idxs = rand_gen.simple_choose(main_area, num_diamonds + num_boulders + 1);
+        std::vector<int> obj_idxs = rand_gen.simple_choose(main_area, num_diamonds + num_boulders + num_mud + 1);
 
         int agent_x = obj_idxs[0] % main_width;
         int agent_y = obj_idxs[0] / main_width;
@@ -167,6 +172,11 @@ class MinerGame : public BasicAbstractGame {
         for (int i = 0; i < num_boulders; i++) {
             int cell = obj_idxs[i + 1 + num_diamonds];
             set_obj(cell, BOULDER);
+        }
+
+        for (int i = 0; i < num_mud; i++) {
+            int cell = obj_idxs[i + 1 + num_diamonds + num_boulders];
+            set_obj(cell, MUD);
         }
 
         std::vector<int> dirt_cells = get_cells_with_type(DIRT);
@@ -261,7 +271,7 @@ class MinerGame : public BasicAbstractGame {
             step_data.reward += DIAMOND_REWARD;
         }
 
-        if (agent_obj == DIRT || agent_obj == DIAMOND) {
+        if (agent_obj == DIRT || agent_obj == MUD || agent_obj == DIAMOND) {
             set_obj(int(agent->x), int(agent->y), SPACE);
         }
 
