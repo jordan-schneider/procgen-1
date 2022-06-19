@@ -278,7 +278,7 @@ class MinerGame : public BasicAbstractGame {
         int main_area = main_width * main_height;
 
         int diamonds_count = 0;
-
+        Grid<int> next_grid = get_grid();
         for (int idx = 0; idx < main_area; idx++) {
             int obj = get_obj(idx);
             int obj_x = idx % main_width;
@@ -296,20 +296,23 @@ class MinerGame : public BasicAbstractGame {
                 bool agent_is_below = agent_idx == below_idx;
 
                 if (below_object == SPACE && !agent_is_below) {
-                    set_obj(idx, SPACE);
-                    set_obj(below_idx, get_moving_type(obj));
+                    next_grid.set_index(idx, SPACE);
+                    next_grid.set_index(below_idx, get_moving_type(obj));
                 } else if (agent_is_below && is_moving(obj)) {
                     step_data.done = true;
                 } else if (is_round(below_object) && obj_x > 0 && is_free(idx - 1) && is_free(idx - main_width - 1)) {
-                    set_obj(idx, SPACE);
-                    set_obj(idx - 1, stat_type);
+                    next_grid.set_index(idx, SPACE);
+                    next_grid.set_index(idx - 1, stat_type);
                 } else if (is_round(below_object) && obj_x < main_width - 1 && is_free(idx + 1) && is_free(idx - main_width + 1)) {
-                    set_obj(idx, SPACE);
-                    set_obj(idx + 1, stat_type);
+                    next_grid.set_index(idx, SPACE);
+                    next_grid.set_index(idx + 1, stat_type);
                 } else {
-                    set_obj(idx, stat_type);
+                    next_grid.set_index(idx, stat_type);
                 }
             }
+        }
+        for (int idx = 0; idx < main_area; idx++) {
+            set_obj(idx, next_grid.get_index(idx));
         }
 
         diamonds_remaining = diamonds_count;
