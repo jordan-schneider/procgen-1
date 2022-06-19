@@ -128,16 +128,21 @@ def insert_question(
     traj_ids: Tuple[int, int],
     algo: QuestionAlgorithm,
     env_name: str,
+    label: Optional[str] = None,
 ) -> int:
-    cursor = conn.execute(
-        "INSERT INTO questions (first_id, second_id, algorithm, env) VALUES (:first_id, :second_id, :algo, :env)",
-        {
-            "first_id": traj_ids[0],
-            "second_id": traj_ids[1],
-            "algo": algo,
-            "env": env_name,
-        },
-    )
+    label_schema = ", label" if label is not None else ""
+    label_value = ", :label" if label is not None else ""
+    query = f"INSERT INTO questions (first_id, second_id, algorithm, env{label_schema}) VALUES (:first_id, :second_id, :algo, :env{label_value})"
+    values = {
+        "first_id": traj_ids[0],
+        "second_id": traj_ids[1],
+        "algo": algo,
+        "env": env_name,
+    }
+    if label is not None:
+        values["label"] = label
+    logging.debug(f"query={query}, values={values}")
+    cursor = conn.execute(query, values)
     assert cursor.lastrowid is not None
     out = int(cursor.lastrowid)
     conn.commit()

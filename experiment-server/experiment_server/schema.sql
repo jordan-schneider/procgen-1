@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS questions(
   first_id INT NOT NULL,
   second_id INT NOT NULL,
   algorithm TEXT NOT NULL,
-  env TEXT NOT NULL
+  env TEXT NOT NULL,
+  label TEXT
 );
 CREATE TABLE IF NOT EXISTS users(
   mturk_id INTEGER PRIMARY KEY NOT NULL,

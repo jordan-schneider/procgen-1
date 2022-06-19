@@ -1,11 +1,85 @@
 import { getAction, post } from './utils';
 
-let game = null;
-let startState = null;
-let actions = null;
-let recording = false;
-let trajIds = [];
 
+
+class Recorder {
+    constructor() {
+        this.recording = false;
+        this.firstTraj = null;
+        this.secondTraj = null;
+        this.startState = null;
+        this.actions = null;
+    }
+
+    startRecording(startState) {
+        if (this.recording) {
+            throw new Error('Already recording');
+        }
+        if (this.firstTraj !== null && this.secondTraj !== null) {
+            throw new Error('Already recorded two trajectories, submit a question before recording a new one');
+        }
+        this.recording = true;
+        this.startState = startState;
+        this.actions = [];
+    }
+
+    stopRecording() {
+        this.recording = false;
+        if (this.firstTraj === null) {
+            this.firstTraj = {
+                actions: this.actions,
+                startState: this.startState,
+            };
+        } else if (this.secondTraj === null) {
+            this.secondTraj = {
+                actions: this.actions,
+                startState: this.startState,
+            };
+        } else {
+            throw new Error('Too many trajectories');
+        }
+        this.actions = null;
+        this.startState = null;
+    }
+
+    cancelRecording() {
+        this.recording = false;
+        this.startState = null;
+        this.actions = null;
+    }
+
+    async submitQuestion(name) {
+        if (this.firstTraj === null || this.secondTraj === null) {
+            throw new Error('Need finished trajectories to submit.');
+        }
+
+        let trajIds = [
+            post('/submit_trajectory', JSON.stringify({
+                start_state: this.firstTraj.startState,
+                actions: this.firstTraj.actions,
+            })),
+            post('/submit_trajectory', JSON.stringify({
+                start_state: this.secondTraj.startState,
+                actions: this.secondTraj.actions,
+            }))
+        ];
+        trajIds = await Promise.all(trajIds.map(trajId => trajId.then(resp => resp.json()).then(json => json.trajectory_id)));
+        post('/submit_question', JSON.stringify({
+            traj_ids: trajIds,
+            name: name
+        }));
+    }
+
+    resetQuestion() {
+        this.firstTraj = null;
+        this.secondTraj = null;
+        this.cancelRecording();
+    }
+}
+
+let game = null;
+let focus = false;
+const recorder = new Recorder();
 const keyState = new Set();
 
 function resetKeys() {
@@ -14,8 +88,10 @@ function resetKeys() {
 
 function listenForKeys() {
     document.body.addEventListener('keydown', (e) => {
-        keyState.add(e.code);
-        e.preventDefault();
+        if (focus) {
+            keyState.add(e.code);
+            e.preventDefault();
+        }
     });
 }
 
@@ -54,8 +130,8 @@ async function main() {
         if (!realtime && keyState.size === 0) return;
 
         const action = getAction(keyState);
-        if (recording && action >= 0) {
-            actions.push(action);
+        if (recorder.recording && action >= 0) {
+            recorder.actions.push(action);
         }
 
         game.step(action);
@@ -66,60 +142,50 @@ async function main() {
 }
 
 async function startRecording() {
-    recording = true;
-    startState = game.getState().grid;
-    actions = [];
-}
-
-async function resetQuestion() {
-    trajIds = [];
-    getElementById("firstTraj").checked = false;
-    getElementById("secondTraj").checked = false;
-    getElementById("questionName").value = "";
-}
-
-async function submitQuestion() {
-    if (trajIds.length === 2) {
-        post('/submit_question', JSON.stringify({
-            traj_ids: trajIds,
-        }));
-    }
-    resetQuestion();
+    recorder.startRecording(game.getState().grid);
 }
 
 async function submitRecording() {
-    if (!recording || startState === null || actions === null) {
+    if (!recorder.recording || recorder.startState === null || recorder.actions === null) {
         return;
     }
-    recording = false;
-
-    await post('/submit_trajectory', JSON.stringify({
-        start_state: startState,
-        actions: actions,
-    })).then(recordTrajectoryId);
-    startState = null;
-    actions = null;
-}
-async function recordTrajectoryId(response) {
-    const data = await response.json();
-    trajIds.push(data.trajectory_id);
-    getElementById("firstTraj").checked = true;
-    if (trajIds.length === 2) {
-        getElementById("secondTraj").checked = true;
+    recorder.stopRecording();
+    document.getElementById("firstTraj").checked = true;
+    if (recorder.secondTraj !== null) {
+        document.getElementById("secondTraj").checked = true;
     }
 }
 
 async function cancelRecording() {
-    recording = false;
-    startState = null;
-    actions = null;
+    reccorder.cancelRecording();
+}
+
+async function resetQuestion() {
+    recorder.resetQuestion();
+    document.getElementById("firstTraj").checked = false;
+    document.getElementById("secondTraj").checked = false;
+    document.getElementById("questionName").value = "";
+}
+
+async function submitQuestion() {
+    const name = document.getElementById("questionName").value;
+    await recorder.submitQuestion(name);
+    resetQuestion();
 }
 
 async function clearQuestion() {
     resetQuestion();
 }
 
+async function gameFocus() {
+    focus = true;
+}
+async function gameUnfocus() {
+    focus = false;
+}
 
+window.gameFocus = gameFocus;
+window.gameUnfocus = gameUnfocus;
 window.startRecording = startRecording;
 window.submitRecording = submitRecording;
 window.cancelRecording = cancelRecording;

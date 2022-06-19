@@ -113,8 +113,11 @@ def submit_question():
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
     traj_ids: Tuple[int, int] = json["traj_ids"]  # type: ignore
+    label = json["name"]  # type: ignore
 
-    id = insert_question(get_db(), traj_ids, "manual", "miner")
+    id = insert_question(
+        conn=get_db(), traj_ids=traj_ids, algo="manual", env_name="miner", label=label
+    )
     return jsonify({"success": True, "question_id": id})
 
 

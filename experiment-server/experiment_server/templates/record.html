@@ -9,10 +9,10 @@
 </head>
 
 <body>
-	<div id="app"></div>
+	<div id="app" tabindex=0 onfocusin="gameFocus();" onfocusout="gameUnfocus();"></div>
 
 	<script src="/assets/env.js"></script>
-	<script src="/assets/interact.js"></script>
+	<script src="/assets/record.js"></script>
 
 	<div id="controls">
 		<input id="startRecording" type="button" value="Start recording" onclick="startRecording();" />
