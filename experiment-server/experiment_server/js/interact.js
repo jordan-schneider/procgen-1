@@ -35,7 +35,7 @@ async function main() {
         realtime = opts.realtime;
         delete opts.realtime;
     }
-    game = await CheerpGame.init({ // eslint-disable-line no-undef
+    const game = await CheerpGame.init({ // eslint-disable-line no-undef
         ...CheerpGame.defaultOpts(), // eslint-disable-line no-undef
         ...opts,
     });
