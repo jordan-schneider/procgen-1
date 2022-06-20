@@ -17,12 +17,14 @@ const int ENEMY = 5;
 const int EXIT = 6;
 const int DIRT = 9;
 const int MUD = 11;
+const int DEAD_PLAYER = 12;
 
 const int OOB_WALL = 10;
 
 class MinerGame : public BasicAbstractGame {
   public:
     int diamonds_remaining = -1;
+    bool died = false;
 
     MinerGame()
         : BasicAbstractGame(NAME) {
@@ -44,6 +46,8 @@ class MinerGame : public BasicAbstractGame {
     void asset_for_type(int type, std::vector<std::string> &names) override {
         if (type == PLAYER) {
             names.push_back("misc_assets/robot_greenDrive1.png");
+        } else if (type == DEAD_PLAYER) {
+            names.push_back("misc_assets/fire_1.png");
         } else if (type == BOULDER) {
             names.push_back("misc_assets/elementStone007.png");
         } else if (type == DIAMOND) {
@@ -135,6 +139,8 @@ class MinerGame : public BasicAbstractGame {
 
     void game_reset() override {
         BasicAbstractGame::game_reset();
+
+        died = false;
 
         agent->rx = .5;
         agent->ry = .5;
@@ -258,6 +264,11 @@ class MinerGame : public BasicAbstractGame {
     void game_step() override {
         BasicAbstractGame::game_step();
 
+        if (died) {
+            step_data.done = true;
+            return;
+        }
+
         if (action_vx > 0)
             agent->is_reflected = false;
         if (action_vx < 0)
@@ -299,7 +310,10 @@ class MinerGame : public BasicAbstractGame {
                     next_grid.set_index(idx, SPACE);
                     next_grid.set_index(below_idx, get_moving_type(obj));
                 } else if (agent_is_below && is_moving(obj)) {
-                    step_data.done = true;
+                    died = true;
+                    // remove(entities.begin(), entities.end(), agent);
+                    entities.erase(entities.begin());
+                    next_grid.set_index(below_idx, DEAD_PLAYER);
                 } else if (is_round(below_object) && obj_x > 0 && is_free(idx - 1) && is_free(idx - main_width - 1)) {
                     next_grid.set_index(idx, SPACE);
                     next_grid.set_index(idx - 1, stat_type);
