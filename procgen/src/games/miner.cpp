@@ -40,7 +40,7 @@ class MinerGame : public BasicAbstractGame {
     }
 
     void load_background_images() override {
-        main_bg_images_ptr = &platform_backgrounds;
+        main_bg_images_ptr = &caves;
     }
 
     void asset_for_type(int type, std::vector<std::string> &names) override {

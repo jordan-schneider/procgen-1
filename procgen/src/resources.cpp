@@ -10,6 +10,7 @@ std::vector<std::shared_ptr<QImage>> platform_backgrounds;
 std::vector<std::shared_ptr<QImage>> space_backgrounds;
 std::vector<std::shared_ptr<QImage>> water_backgrounds;
 std::vector<std::shared_ptr<QImage>> water_surface_backgrounds;
+std::vector<std::shared_ptr<QImage>> caves;
 
 std::map<std::string, std::shared_ptr<QImage>> sprites;
 
@@ -28,16 +29,17 @@ std::shared_ptr<QImage> load_resource_ptr(std::string relpath, QImage::Format fo
     return asset_ptr;
 }
 
-static client::Promise* promiseAll(client::TArray<client::Promise>* arr)
-{
-    client::Promise* ret;
-    __asm__("Promise.all(%1)" : "=r"(ret) : "r"(arr));
+static client::Promise *promiseAll(client::TArray<client::Promise> *arr) {
+    client::Promise *ret;
+    __asm__("Promise.all(%1)"
+            : "=r"(ret)
+            : "r"(arr));
     return ret;
 }
 
-client::Promise* images_load(const std::string& resource_root) {
+client::Promise *images_load(const std::string &resource_root) {
     loadingHelper.setRoot(resource_root);
-    auto* promises = new client::TArray<client::Promise>();
+    auto *promises = new client::TArray<client::Promise>();
 
     auto sprite_paths = std::vector<std::string>{
         "kenney/Ground/Planet/planetCorner_left.png",
@@ -952,11 +954,9 @@ client::Promise* images_load(const std::string& resource_root) {
         promises->push(loadingHelper.load(pair.second));
     }
 
-    return promiseAll(promises)->then(cheerp::Callback([
-        sprite_paths = std::move(sprite_paths),
-        group_to_paths = std::move(group_to_paths),
-        group_to_vector = std::move(group_to_vector)
-    ](){
+    return promiseAll(promises)->then(cheerp::Callback([sprite_paths = std::move(sprite_paths),
+                                                        group_to_paths = std::move(group_to_paths),
+                                                        group_to_vector = std::move(group_to_vector)]() {
         for (auto const &pair : group_to_paths) {
             auto vec = group_to_vector.at(pair.first);
             for (const auto &path : pair.second) {
@@ -964,7 +964,7 @@ client::Promise* images_load(const std::string& resource_root) {
             }
         }
 
-        for (const auto& sprite_path : sprite_paths) {
+        for (const auto &sprite_path : sprite_paths) {
             sprites[sprite_path] = load_resource_ptr(sprite_path, QImage::Format_ARGB32_Premultiplied);
         }
 
@@ -972,5 +972,9 @@ client::Promise* images_load(const std::string& resource_root) {
         for (auto bg : space_backgrounds) {
             platform_backgrounds.push_back(bg);
         }
+
+        caves.push_back(platform_backgrounds[2]);
+        caves.push_back(platform_backgrounds[3]);
+        caves.push_back(platform_backgrounds[13]);
     }));
 }
