@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal, Optional, Tuple, cast
 
@@ -6,17 +8,18 @@ import numpy as np
 DataModality = Literal["state", "action", "traj"]
 QuestionAlgorithm = Literal["random", "infogain", "manual"]
 
+
 def assure_modality(modality: str) -> DataModality:
     if not (modality == "state" or modality == "action" or modality == "traj"):
         raise ValueError(f"Unknown modality: {modality}")
     modality = cast(DataModality, modality)
     return modality
 
+
 @dataclass
 class State:
     grid: np.ndarray
-    grid_width: int
-    grid_height: int
+    grid_shape: Tuple[int, int]
     agent_pos: Tuple[int, int]
     exit_pos: Tuple[int, int]
 
@@ -24,11 +27,18 @@ class State:
         return (
             isinstance(other, State)
             and np.array_equal(self.grid, other.grid)
-            and self.grid_width == other.grid_width
-            and self.grid_height == other.grid_height
+            and self.grid_shape == other.grid_shape
             and self.agent_pos == other.agent_pos
             and self.exit_pos == other.exit_pos
         )
+
+    @staticmethod
+    def from_json(json_dict: dict) -> State:
+        grid = np.array(list(json_dict["grid"].values()))
+        grid_shape = json_dict["grid_shape"]
+        agent_pos = json_dict["agent_pos"]
+        exit_pos = json_dict["exit_pos"]
+        return State(grid, grid_shape, agent_pos, exit_pos)
 
 
 @dataclass
@@ -63,8 +73,7 @@ class FeatureTrajectory(Trajectory):
 @dataclass
 class Question:
     id: int
-    first_traj: Trajectory
-    second_traj: Trajectory
+    trajs: Tuple[Trajectory, Trajectory]
 
 
 @dataclass
@@ -74,6 +83,7 @@ class Answer:
     answer: bool
     start_time: str
     end_time: str
+
 
 # TODO: Decide what demographics might be interesting
 @dataclass

@@ -142,7 +142,16 @@ async function main() {
 }
 
 async function startRecording() {
-    recorder.startRecording(game.getState().grid);
+    recorder.startRecording(jsStateToPython(game.getState()));
+}
+
+function jsStateToPython(state) {
+    return {
+        grid: state.grid,
+        grid_shape: [state.grid_width, state.grid_height],
+        agent_pos: [state.agent_x, state.agent_y],
+        exit_pos: [state.exit_x, state.exit_y],
+    };
 }
 
 async function submitRecording() {

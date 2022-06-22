@@ -26,8 +26,7 @@ def collect_trajs(
         info = env.get_info()[0]
         start_state = State(
             grid=info["grid"],
-            grid_width=int(info["grid_size"][0]),
-            grid_height=int(info["grid_size"][1]),
+            grid_shape=info["grid_size"],
             agent_pos=info["agent_pos"],
             exit_pos=info["exit_pos"],
         )
@@ -62,8 +61,7 @@ def collect_feature_trajs(
         logging.debug(f"info={info}")
         start_state = State(
             grid=info["grid"],
-            grid_width=int(info["grid_size"][0]),
-            grid_height=int(info["grid_size"][1]),
+            grid_shape=info["grid_size"],
             agent_pos=info["agent_pos"],
             exit_pos=info["exit_pos"],
         )

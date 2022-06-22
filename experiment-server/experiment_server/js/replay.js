@@ -22,7 +22,7 @@ function parseOpts() {
   }
 }
 
-async function requestQuestion({
+async function requestRandomQuestion({
   env = 'miner', lengths = [10, 10], types = ['traj', 'traj'], excludeIds = [],
 } = {}) {
   return post('/random_question', JSON.stringify({
@@ -30,7 +30,13 @@ async function requestQuestion({
     lengths,
     types,
     exclude_ids: excludeIds,
-  })).then((res) => res.json());
+  })).then((resp) => resp.json()).then((json) => JSON.parse(json));
+}
+
+async function requestQuestionByName(name) {
+  return post('/named_question', JSON.stringify({
+    name
+  })).then((resp) => resp.json()).then((json) => JSON.parse(json));
 }
 
 function prepareState(state) {
@@ -41,8 +47,8 @@ function prepareState(state) {
 
   const out = {
     grid: newGrid,
-    grid_width: state.grid_width,
-    grid_height: state.grid_height,
+    grid_width: state.grid_shape[0],
+    grid_height: state.grid_shape[1],
     agent_x: state.agent_pos[0],
     agent_y: state.agent_pos[1],
     exit_x: state.exit_pos[0],
@@ -62,10 +68,11 @@ function makeGameState(game, traj) {
   };
 }
 
+
+
 async function parseQuestion() {
-  question = JSON.parse(await requestQuestion({ excludeIds: usedQuestions }));
-  const leftTraj = question.first_traj;
-  const rightTraj = question.second_traj;
+  const leftTraj = question.trajs[0];
+  const rightTraj = question.trajs[1];
   leftTraj.start_state = prepareState(leftTraj.start_state);
   rightTraj.start_state = prepareState(rightTraj.start_state);
 
@@ -93,6 +100,10 @@ function checkStep(state) {
 
 async function main() {
   const opts = parseOpts();
+
+  const questionName = opts.questionName;
+  delete opts.questionName;
+
   const leftGame = await CheerpGame.init({
     ...CheerpGame.defaultOpts(),
     ...opts,
@@ -101,11 +112,18 @@ async function main() {
     ...CheerpGame.defaultOpts(),
     ...opts,
   });
+  leftGame.getState();
   games.push(leftGame, rightGame);
   document.getElementById('leftGame').appendChild(leftGame.getCanvas());
   document.getElementById('rightGame').appendChild(rightGame.getCanvas());
 
-  await parseQuestion();
+  if (questionName !== undefined) {
+    question = await requestQuestionByName(questionName);
+    await parseQuestion();
+  } else {
+    question = await requestRandomQuestion({ excludeIds: usedQuestions });
+    await parseQuestion();
+  }
 
   setInterval(() => {
     checkStep(gameStates[0]);

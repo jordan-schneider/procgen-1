@@ -27,19 +27,19 @@ def get_random_question(
     query_s = f"""
 SELECT
     q.*,
-    left.start_state as left_start,
-    left.actions as left_actions,
-    left.length as left_length,
-    left.modality as left_modality,
-    right.start_state as right_start,
-    right.actions as right_actions,
-    right.length as right_length,
-    right.modality as right_modality
+    left.start_state AS left_start,
+    left.actions AS left_actions,
+    left.length AS left_length,
+    left.modality AS left_modality,
+    right.start_state AS right_start,
+    right.actions AS right_actions,
+    right.length AS right_length,
+    right.modality AS right_modality
 FROM 
-    (SELECT * FROM questions {f"WHERE questions.id NOT IN ({excl_list})" if len(excl_list) > 0 else ""}) as q
-    LEFT JOIN trajectories as left ON
+    (SELECT * FROM questions {f"WHERE questions.id NOT IN ({excl_list})" if len(excl_list) > 0 else ""}) AS q
+    LEFT JOIN trajectories AS left ON
         q.first_id=left.id
-    LEFT JOIN trajectories as right ON
+    LEFT JOIN trajectories AS right ON
         q.second_id=right.id
     WHERE
         left.length=:length
@@ -65,6 +65,7 @@ FROM
         second_id,
         algorithm,
         env,
+        question_name,
         left_start,
         left_actions,
         left_length,
@@ -77,11 +78,74 @@ FROM
     # TODO: Swap pickle for dill
     return Question(
         id=id,
-        first_traj=Trajectory(
-            pickle.loads(left_start), pickle.loads(left_actions), env, left_modality
+        trajs=(
+            Trajectory(
+                pickle.loads(left_start), pickle.loads(left_actions), env, left_modality
+            ),
+            Trajectory(
+                pickle.loads(right_start),
+                pickle.loads(right_actions),
+                env,
+                right_modality,
+            ),
         ),
-        second_traj=Trajectory(
-            pickle.loads(right_start), pickle.loads(right_actions), env, right_modality
+    )
+
+
+def get_named_question(conn: sqlite3.Connection, name: str) -> Question:
+    query_s = """
+SELECT
+    q.*,
+    left.start_state AS left_start,
+    left.actions AS left_actions,
+    left.length AS left_length,
+    left.modality AS left_modality,
+    right.start_state AS right_start,
+    right.actions AS right_actions,
+    right.length AS right_length,
+    right.modality AS right_modality
+FROM 
+    questions AS q
+    LEFT JOIN trajectories AS left ON
+        q.first_id=left.id
+    LEFT JOIN trajectories AS right ON
+        q.second_id=right.id
+    WHERE
+        q.label=:name
+    ORDER BY RANDOM() LIMIT 1;"""
+    values = {"name": name}
+    logging.debug(f"Querying:\n{query_s}\nwith values:\n{values}")
+
+    cursor = conn.execute(query_s, values)
+    (
+        id,
+        first_id,
+        second_id,
+        algorithm,
+        env,
+        question_name,
+        left_start,
+        left_actions,
+        left_length,
+        left_modality,
+        right_start,
+        right_actions,
+        right_length,
+        right_modality,
+    ) = next(cursor)
+    # TODO: Swap pickle for dill
+    return Question(
+        id=id,
+        trajs=(
+            Trajectory(
+                pickle.loads(left_start), pickle.loads(left_actions), env, left_modality
+            ),
+            Trajectory(
+                pickle.loads(right_start),
+                pickle.loads(right_actions),
+                env,
+                right_modality,
+            ),
         ),
     )
 

@@ -48,7 +48,7 @@ def states(draw, max_grid_size: int = 10) -> State:
     position = tuples(pos_val, pos_val)
     agent_pos = draw(position)
     exit_pos = draw(position)
-    return State(grid, grid_size, grid_size, agent_pos, exit_pos)
+    return State(grid, (grid_size, grid_size), agent_pos, exit_pos)
 
 
 actions = arrays(

@@ -1,10 +1,13 @@
 import sqlite3
 from logging.config import dictConfig
+from typing import Tuple
 
 import arrow
+import numpy as np
 from flask import Flask, g, jsonify, render_template, request
 
 from experiment_server.query import (
+    get_named_question,
     get_random_question,
     insert_answer,
     insert_question,
@@ -12,7 +15,7 @@ from experiment_server.query import (
 )
 from experiment_server.SECRETS import SECRET_KEY
 from experiment_server.serialize import serialize
-from experiment_server.type import Answer, Trajectory, assure_modality
+from experiment_server.type import Answer, State, Trajectory, assure_modality
 
 dictConfig(
     {
@@ -67,15 +70,16 @@ def submit_answer():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
+    assert json is not None
 
     id = insert_answer(
         get_db(),
         Answer(
             user_id=0,
-            question_id=json["id"],  # type: ignore
-            answer=json["answer"] == "right",  # type: ignore
-            start_time=arrow.get(json["startTime"]).isoformat(),  # type: ignore
-            end_time=arrow.get(json["stopTime"]).isoformat(),  # type: ignore
+            question_id=json["id"],
+            answer=json["answer"] == "right",
+            start_time=arrow.get(json["startTime"]).isoformat(),
+            end_time=arrow.get(json["stopTime"]).isoformat(),
         ),
     )
 
@@ -88,11 +92,12 @@ def request_random_question():
         return jsonify({"error": "Method not allowed"}), 405
 
     spec = request.get_json()
+    assert spec is not None
 
-    env = spec["env"]  # type: ignore
-    length = spec["lengths"][0]  # type: ignore
-    modality = spec["types"][0]  # type: ignore
-    exclude_ids = spec["exclude_ids"]  # type: ignore
+    env = spec["env"]
+    length = spec["lengths"][0]
+    modality = spec["types"][0]
+    exclude_ids = spec["exclude_ids"]
 
     try:
         modality = assure_modality(modality)
@@ -107,13 +112,27 @@ def request_random_question():
     return serialize(question)
 
 
+@app.route("/named_question", methods=["POST"])
+def request_named_question():
+    if request.method != "POST":
+        return jsonify({"error": "Method not allowed"}), 405
+
+    spec = request.get_json()
+    assert spec is not None
+
+    conn = get_db()
+    question = get_named_question(conn=conn, name=spec["name"])
+    return serialize(question)
+
+
 @app.route("/submit_question", methods=["POST"])
 def submit_question():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
-    traj_ids: Tuple[int, int] = json["traj_ids"]  # type: ignore
-    label = json["name"]  # type: ignore
+    assert json is not None
+    traj_ids: Tuple[int, int] = json["traj_ids"]
+    label = json["name"]
 
     id = insert_question(
         conn=get_db(), traj_ids=traj_ids, algo="manual", env_name="miner", label=label
@@ -126,12 +145,15 @@ def submit_trajectory():
     if request.method != "POST":
         return jsonify({"error": "Method not allowed"}), 405
     json = request.get_json()
+    assert json is not None
+
+    json_state = json["start_state"]
 
     id = insert_traj(
         get_db(),
         Trajectory(
-            start_state=json["start_state"],  # type: ignore
-            actions=json["actions"],  # type: ignore
+            start_state=State.from_json(json_state),
+            actions=np.array(json["actions"]),
             env_name="miner",
             modality="traj",
         ),

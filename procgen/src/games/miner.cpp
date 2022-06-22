@@ -403,7 +403,7 @@ class MinerGame : public BasicAbstractGame {
         auto grid_stop = latent_state.grid.begin();
         std::advance(grid_stop, grid_size);
         std::copy(grid_start, grid_stop, grid);
-        js_state->set_grid(cheerp::MakeTypedArray(grid, grid_size));
+        js_state->set_grid(cheerp::MakeTypedArray(grid, grid_size * 4));
 
         js_state->set_agent_x(latent_state.agent_x);
         js_state->set_agent_y(latent_state.agent_y);
