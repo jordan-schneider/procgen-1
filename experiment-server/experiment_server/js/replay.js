@@ -147,6 +147,10 @@ async function pauseLeft() {
 async function pauseRight() {
   pause('right');
 }
+async function pauseBoth() {
+  pause('left');
+  pause('right');
+}
 
 function play(side) {
   if (!questionStarted) {
@@ -161,6 +165,10 @@ async function playLeft() {
 async function playRight() {
   play('right');
 }
+async function playBoth() {
+  play('left');
+  play('right');
+}
 
 function restart(side) {
   const index = getSideIndex(side);
@@ -173,6 +181,10 @@ async function restartLeft() {
   restart('left');
 }
 async function restartRight() {
+  restart('right');
+}
+async function restartBoth() {
+  restart('left');
   restart('right');
 }
 
@@ -197,10 +209,13 @@ async function selectRight() {
 
 window.pauseLeft = pauseLeft;
 window.pauseRight = pauseRight;
+window.pauseBoth = pauseBoth;
 window.playLeft = playLeft;
 window.playRight = playRight;
+window.playBoth = playBoth;
 window.restartLeft = restartLeft;
 window.restartRight = restartRight;
+window.restartBoth = restartBoth;
 window.selectLeft = selectLeft;
 window.selectRight = selectRight;
 
