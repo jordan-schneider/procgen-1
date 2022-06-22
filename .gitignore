@@ -120,6 +120,7 @@ settings.json
 *.code-workspace
 
 *.db
+*.db.bak
 
 node_modules
 **/static/*.js
