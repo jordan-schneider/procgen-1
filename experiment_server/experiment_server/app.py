@@ -1,8 +1,11 @@
+import logging
 import sqlite3
 from logging.config import dictConfig
+from pathlib import Path
 from typing import Tuple
 
 import arrow
+import boto3  # type: ignore
 import numpy as np
 from flask import Flask, g, jsonify, render_template, request
 
@@ -32,20 +35,28 @@ dictConfig(
                 "formatter": "default",
             }
         },
-        "root": {"level": "INFO", "handlers": ["wsgi"]},
+        "root": {"level": "DEBUG", "handlers": ["wsgi"]},
     }
 )
 
 app = Flask(__name__, static_url_path="/assets")
+# TODO: Make this heroku compliant
 DATABASE = (
-    "/home/joschnei/web-procgen/experiment-server/experiment_server/experiments.db"
+    "/home/joschnei/web-procgen/experiment_server/experiment_server/experiments.db"
 )
 app.secret_key = SECRET_KEY
+
+
+s3 = boto3.client("s3")
 
 
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
+        logging.debug(f"Local database expected at {DATABASE}")
+        if not Path(DATABASE).exists():
+            logging.info("Downloading database from Amazon S3")
+            # s3.download_file("mrl-experiment-sqlite", "experiments.db", DATABASE)
         db = g._database = sqlite3.connect(DATABASE)
     return db
 
@@ -167,3 +178,7 @@ def close_connection(exception):
     db = getattr(g, "_database", None)
     if db is not None:
         db.close()
+    if Path(DATABASE).exists():
+        logging.info("Uploading database to Amazon S3")
+        # s3.upload_file(DATABASE, "mrl-experiment-sqlite", "experiments.db")
+        pass

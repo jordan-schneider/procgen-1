@@ -21,6 +21,7 @@ dependencies = [
     "gym3",
     "arrow",
     "sklearn",
+    "boto3[crt]"
 ]
 
 [project.optional-dependencies]
