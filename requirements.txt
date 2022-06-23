@@ -4,3 +4,4 @@ boto3[crt]
 numpy>=1.21
 flask
 gunicorn
+./experiment_server
