@@ -3,13 +3,13 @@ from typing import Callable, List, Tuple
 
 import gym3  # type: ignore
 import numpy as np
+from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen.feature_envs import FeatureEnv
 from linear_procgen.util import get_root_env
 from procgen.env import ENV_NAMES_T
 
-from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
-from experiment_server.util import remove_duplicates, remove_zeros
+from question_gen.util import remove_duplicates, remove_zeros
 
 
 def collect_trajs(

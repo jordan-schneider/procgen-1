@@ -125,4 +125,4 @@ settings.json
 node_modules
 **/static/*.js
 
-SECRETS.py
+SECRETS.sh

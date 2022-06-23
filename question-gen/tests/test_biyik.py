@@ -1,8 +1,8 @@
 import numpy as np
-from experiment_server.biyik import infogain, successive_elimination
-from experiment_server.util import remove_duplicates
 from hypothesis import given
 from hypothesis.strategies import integers
+from question_gen.biyik import infogain, successive_elimination
+from question_gen.util import remove_duplicates
 
 from .strategies import halfplanes_strategy, rewards_strategy
 

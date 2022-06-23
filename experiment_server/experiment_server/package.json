@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "webpack",
-    "deploy": "python -m flask run"
+    "deploy": ". ./SECRETS.sh && python -m flask run"
   },
   "author": "",
   "license": "ISC",

@@ -1,10 +1,10 @@
 from typing import Tuple
 
 import numpy as np
-from experiment_server.util import remove_duplicates, remove_zeros
 from hypothesis import given
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import composite, integers
+from question_gen.util import remove_duplicates, remove_zeros
 
 from .strategies import floats_1000
 

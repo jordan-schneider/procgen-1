@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 from logging.config import dictConfig
 from pathlib import Path
@@ -16,7 +17,6 @@ from experiment_server.query import (
     insert_question,
     insert_traj,
 )
-from experiment_server.SECRETS import SECRET_KEY
 from experiment_server.serialize import serialize
 from experiment_server.type import Answer, State, Trajectory, assure_modality
 
@@ -35,16 +35,13 @@ dictConfig(
                 "formatter": "default",
             }
         },
-        "root": {"level": "DEBUG", "handlers": ["wsgi"]},
+        "root": {"level": "INFO", "handlers": ["wsgi"]},
     }
 )
 
 app = Flask(__name__, static_url_path="/assets")
-# TODO: Make this heroku compliant
-DATABASE = (
-    "/home/joschnei/web-procgen/experiment_server/experiment_server/experiments.db"
-)
-app.secret_key = SECRET_KEY
+DATABASE_PATH = os.environ["DATABASE_PATH"]
+app.secret_key = os.environ["SECRET_KEY"]
 
 
 s3 = boto3.client("s3")
@@ -53,11 +50,11 @@ s3 = boto3.client("s3")
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        logging.debug(f"Local database expected at {DATABASE}")
-        if not Path(DATABASE).exists():
+        logging.debug(f"Local database expected at {DATABASE_PATH}")
+        if not Path(DATABASE_PATH).exists():
             logging.info("Downloading database from Amazon S3")
-            # s3.download_file("mrl-experiment-sqlite", "experiments.db", DATABASE)
-        db = g._database = sqlite3.connect(DATABASE)
+            s3.download_file("mrl-experiment-sqlite", "experiments.db", DATABASE)
+        db = g._database = sqlite3.connect(DATABASE_PATH)
     return db
 
 
@@ -178,7 +175,7 @@ def close_connection(exception):
     db = getattr(g, "_database", None)
     if db is not None:
         db.close()
-    if Path(DATABASE).exists():
+    if Path(DATABASE_PATH).exists():
         logging.info("Uploading database to Amazon S3")
         # s3.upload_file(DATABASE, "mrl-experiment-sqlite", "experiments.db")
         pass

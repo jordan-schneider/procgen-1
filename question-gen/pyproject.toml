@@ -1,7 +1,7 @@
 [project]
-name = "experiment_server"
+name = "question_gen"
 version = "0.0.1"
-description = "Experiment server for reward learning from preferences"
+description = "Question generation for reward learning from preferences"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
@@ -12,10 +12,14 @@ classifiers = [
   "Programming Language :: Python :: 3"
 ]
 dependencies = [
-    "arrow",
-    "boto3[crt]",
+    "fire",
     "numpy >= 1.21",
-    "flask"
+    "procgen @ git+https://github.com/jordan-schneider/procgen@master#egg=procgen",
+    "linear_procgen @ git+https://github.com/jordan-schneider/linear-procgen@main#egg=linear_procgen",
+    "sklearn",
+    "scipy",
+    "gym3",
+    "../experiment_server",
 ]
 
 [project.optional-dependencies]

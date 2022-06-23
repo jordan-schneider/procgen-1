@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances  # type: ignore
 
-from experiment_server.logspace import log_normalize_logs
+from question_gen.logspace import log_normalize_logs
 
 
 def boltzmann_likelihood(
@@ -147,7 +147,9 @@ def successive_elimination(
 
     while len(indices) > n_out_questions:
         mins = np.where(dists == np.min(dists))
-        assert np.array_equal(np.sort(mins[0]), np.sort(mins[1])), f"Minimum distances not symmetric. mins={mins}, dists={dists}"
+        assert np.array_equal(
+            np.sort(mins[0]), np.sort(mins[1])
+        ), f"Minimum distances not symmetric. mins={mins}, dists={dists}"
         assert (
             len(mins[0]) >= 1
         ), f"There should be at least two minimums. mins={mins}, dists={dists}"

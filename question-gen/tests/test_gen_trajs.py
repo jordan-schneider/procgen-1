@@ -1,10 +1,10 @@
 from typing import List, Tuple
 
 import numpy as np
-from experiment_server.gen_trajectory import compute_diffs
 from experiment_server.type import FeatureTrajectory
 from hypothesis import given
 from hypothesis.strategies import lists, tuples
+from question_gen.gen_trajectory import compute_diffs
 
 from .strategies import actions, feature_trajs, states
 

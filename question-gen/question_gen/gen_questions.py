@@ -4,20 +4,20 @@ from typing import Literal
 
 import fire  # type: ignore
 import numpy as np
+from experiment_server.query import insert_question, insert_traj
+from experiment_server.type import DataModality
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 
-from experiment_server.biyik import successive_elimination
-from experiment_server.gen_trajectory import (
+from question_gen.biyik import successive_elimination
+from question_gen.gen_trajectory import (
     collect_feature_questions,
     collect_trajs,
     compute_diffs,
 )
-from experiment_server.query import insert_question, insert_traj
-from experiment_server.random_policy import RandomGridPolicy, RandomPolicy
-from experiment_server.type import DataModality
-from experiment_server.util import setup_logging
+from question_gen.random_policy import RandomGridPolicy, RandomPolicy
+from question_gen.util import setup_logging
 
 
 def init_db(db_path: Path, schema_path: Path):
