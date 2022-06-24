@@ -53,7 +53,7 @@ def get_db():
         logging.debug(f"Local database expected at {DATABASE_PATH}")
         if not Path(DATABASE_PATH).exists():
             logging.info("Downloading database from Amazon S3")
-            s3.download_file("mrl-experiment-sqlite", "experiments.db", DATABASE)
+            s3.download_file("mrl-experiment-sqlite", "experiments.db", DATABASE_PATH)
         db = g._database = sqlite3.connect(DATABASE_PATH)
     return db
 
@@ -177,5 +177,5 @@ def close_connection(exception):
         db.close()
     if Path(DATABASE_PATH).exists():
         logging.info("Uploading database to Amazon S3")
-        # s3.upload_file(DATABASE, "mrl-experiment-sqlite", "experiments.db")
+        # s3.upload_file(DATABASE_PATH, "mrl-experiment-sqlite", "experiments.db")
         pass
