@@ -1,7 +1,6 @@
 import pickle as pkl
 import sqlite3
 from itertools import tee
-from msilib.schema import Feature
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Sequence, Set, Tuple
 
