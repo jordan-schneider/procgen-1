@@ -26,9 +26,9 @@ def collect_trajs(
         info = env.get_info()[0]
         start_state = State(
             grid=info["grid"],
-            grid_shape=info["grid_size"],
-            agent_pos=info["agent_pos"],
-            exit_pos=info["exit_pos"],
+            grid_shape=tuple(info["grid_size"]),  # type: ignore
+            agent_pos=tuple(info["agent_pos"]),  # type: ignore
+            exit_pos=tuple(info["exit_pos"]),  # type: ignore
         )
         logging.debug(start_state.grid.shape)
         actions: List[np.ndarray] = []

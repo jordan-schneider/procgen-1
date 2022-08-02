@@ -25,11 +25,13 @@ class MinerGame : public BasicAbstractGame {
   public:
     int diamonds_remaining = -1;
     bool died = false;
+    int main_area = -1;
 
     MinerGame()
         : BasicAbstractGame(NAME) {
         main_width = 20;
         main_height = 20;
+        main_area = main_width * main_height;
 
         mixrate = .5;
         maxspeed = .5;
@@ -57,7 +59,7 @@ class MinerGame : public BasicAbstractGame {
         } else if (type == DIRT) {
             names.push_back("misc_assets/dirt.png");
         } else if (type == MUD) {
-            names.push_back("misc_assets/groundB.png");
+            names.push_back("misc_assets/mud.png");
         } else if (type == OOB_WALL) {
             names.push_back("misc_assets/tile_bricksGrey.png");
         }
@@ -135,6 +137,7 @@ class MinerGame : public BasicAbstractGame {
             main_width = 35;
             main_height = 35;
         }
+        main_area = main_width * main_height;
     }
 
     void game_reset() override {
@@ -144,8 +147,6 @@ class MinerGame : public BasicAbstractGame {
 
         agent->rx = .5;
         agent->ry = .5;
-
-        int main_area = main_height * main_width;
 
         options.center_agent = options.distribution_mode == MemoryMode;
         grid_step = true;
@@ -166,21 +167,21 @@ class MinerGame : public BasicAbstractGame {
         agent->x = agent_x + .5;
         agent->y = agent_y + .5;
 
-        for (int i = 0; i < main_area; i++) {
+        for (int i = 0; i < main_area; ++i) {
             set_obj(i, DIRT);
         }
 
-        for (int i = 0; i < num_diamonds; i++) {
+        for (int i = 0; i < num_diamonds; ++i) {
             int cell = obj_idxs[i + 1];
             set_obj(cell, DIAMOND);
         }
 
-        for (int i = 0; i < num_boulders; i++) {
+        for (int i = 0; i < num_boulders; ++i) {
             int cell = obj_idxs[i + 1 + num_diamonds];
             set_obj(cell, BOULDER);
         }
 
-        for (int i = 0; i < num_mud; i++) {
+        for (int i = 0; i < num_mud; ++i) {
             int cell = obj_idxs[i + 1 + num_diamonds + num_boulders];
             set_obj(cell, MUD);
         }
@@ -189,8 +190,8 @@ class MinerGame : public BasicAbstractGame {
 
         set_obj(int(agent->x), int(agent->y), SPACE);
 
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; ++i) {
+            for (int j = -1; j <= 1; ++j) {
                 int ox = agent_x + i;
                 int oy = agent_y + j;
                 if (get_obj(ox, oy) == BOULDER) {
@@ -246,28 +247,35 @@ class MinerGame : public BasicAbstractGame {
         return type == BOULDER || type == MOVING_BOULDER || type == DIAMOND || type == MOVING_DIAMOND;
     }
 
-    void handle_push(Grid<int> &next_grid) {
+    void handle_push(Grid<bool> &has_moved) {
         int agent_idx = get_agent_index();
         int agentx = agent_idx % main_width;
 
         if (action_vx == 1 && (agent->vx == 0) && (agentx < main_width - 2) && get_obj(agent_idx + 1) == BOULDER && get_obj(agent_idx + 2) == SPACE) {
-            next_grid.set_index(agent_idx + 1, SPACE);
             set_obj(agent_idx + 1, SPACE);
-            next_grid.set_index(agent_idx + 2, BOULDER);
+            set_obj(agent_idx + 2, BOULDER);
+            has_moved.set_index(agent_idx + 2, true);
             agent->x += 1;
         } else if (action_vx == -1 && (agent->vx == 0) && (agentx > 1) && get_obj(agent_idx - 1) == BOULDER && get_obj(agent_idx - 2) == SPACE) {
-            next_grid.set_index(agent_idx - 1, SPACE);
             set_obj(agent_idx - 1, SPACE);
-            next_grid.set_index(agent_idx - 2, BOULDER);
+            set_obj(agent_idx - 2, BOULDER);
+            has_moved.set_index(agent_idx - 2, true);
             agent->x -= 1;
         }
     }
 
     void game_step() override {
+        // Objects at or below agent's height move before the agent does (so you can't push something above an empty space), but objects above the agent fall after the agent moves (so the agent can dodge).
+        Grid<bool> has_moved;
+        has_moved.resize(main_width, main_height);
+
+        for (int y = 0; y <= agent->y; ++y) {
+            for (int x = 0; x < main_width; ++x) {
+                move_cell(x, y, has_moved);
+            }
+        }
+
         BasicAbstractGame::game_step();
-
-        Grid<int> next_grid = get_grid();
-
         if (died) {
             step_data.done = true;
             return;
@@ -278,9 +286,9 @@ class MinerGame : public BasicAbstractGame {
         if (action_vx < 0)
             agent->is_reflected = true;
 
-        handle_push(next_grid);
+        handle_push(has_moved);
 
-        int agent_obj = get_obj(int(agent->x), int(agent->y));
+        int agent_obj = get_stationary_type(get_obj(int(agent->x), int(agent->y)));
 
         if (agent_obj == DIAMOND) {
             step_data.reward += DIAMOND_REWARD;
@@ -288,63 +296,63 @@ class MinerGame : public BasicAbstractGame {
 
         if (agent_obj == DIRT || agent_obj == MUD || agent_obj == DIAMOND) {
             set_obj(int(agent->x), int(agent->y), SPACE);
-            next_grid.set(int(agent->x), int(agent->y), SPACE);
         }
 
-        int main_area = main_width * main_height;
-
-        int diamonds_count = 0;
-        for (int idx = 0; idx < main_area; idx++) {
-            int obj = get_obj(idx);
-            int obj_x = idx % main_width;
-            int stat_type = get_stationary_type(obj);
-
-            int agent_idx = get_agent_index();
-
-            if (stat_type == DIAMOND) {
-                diamonds_count++;
-            }
-
-            if (obj == BOULDER || obj == MOVING_BOULDER || obj == DIAMOND || obj == MOVING_DIAMOND) {
-                int below_idx = idx - main_width;
-                int below_object = get_obj(below_idx);
-                bool agent_is_below = agent_idx == below_idx;
-
-                if (below_object == SPACE && !agent_is_below) {
-                    next_grid.set_index(idx, SPACE);
-                    int two_below_idx = below_idx - main_width;
-                    int two_below_obj = get_obj(two_below_idx);
-                    int obj_type = two_below_obj == SPACE ? get_moving_type(obj) : stat_type;
-                    next_grid.set_index(below_idx, obj_type);
-                } else if (agent_is_below && is_moving(obj)) {
-                    died = true;
-                    // remove(entities.begin(), entities.end(), agent);
-                    entities.erase(entities.begin());
-                    next_grid.set_index(below_idx, DEAD_PLAYER);
-                } else if (is_round(below_object) && obj_x > 0 && is_free(idx - 1) && is_free(idx - main_width - 1)) {
-                    next_grid.set_index(idx, SPACE);
-                    next_grid.set_index(idx - 1, stat_type);
-                } else if (is_round(below_object) && obj_x < main_width - 1 && is_free(idx + 1) && is_free(idx - main_width + 1)) {
-                    next_grid.set_index(idx, SPACE);
-                    next_grid.set_index(idx + 1, stat_type);
-                } else {
-                    next_grid.set_index(idx, stat_type);
-                }
+        for (int y = agent->y + 1; y < main_height; ++y) {
+            for (int x = 0; x < main_width; ++x) {
+                move_cell(x, y, has_moved);
             }
         }
-        for (int idx = 0; idx < main_area; idx++) {
-            set_obj(idx, next_grid.get_index(idx));
-        }
+        diamonds_remaining = count_diamonds();
+    }
 
-        diamonds_remaining = diamonds_count;
+    void move_cell(int x, int y, Grid<bool> &has_moved) {
+        // TODO: Make it so we only convert between idx and (x,y) once.
+        int idx = x + main_width * y;
+        bool current_moved = has_moved.get_index(idx);
+        int obj = get_obj(idx);
+        int obj_x = idx % main_width;
+        int stat_type = get_stationary_type(obj);
+        int agent_idx = get_agent_index();
 
-        for (auto ent : entities) {
-            if (ent->type == ENEMY) {
-                if (rand_gen.randn(6) == 0) {
-                    choose_new_vel(ent);
-                }
+        if (stat_type == BOULDER || stat_type == DIAMOND && !current_moved) {
+            int below_idx = idx - main_width;
+            int below_object = get_obj(below_idx);
+            bool agent_is_below = agent_idx == below_idx;
+
+            if (below_object == SPACE && !agent_is_below) {
+                set_obj(idx, SPACE);
+                int two_below_idx = below_idx - main_width;
+                int two_below_obj = get_obj(two_below_idx);
+                int obj_type = two_below_obj == SPACE ? get_moving_type(obj) : stat_type;
+                set_obj(below_idx, obj_type);
+                has_moved.set_index(below_idx, true);
+            } else if (agent_is_below && is_moving(obj)) {
+                died = true;
+                entities.erase(entities.begin());
+                set_obj(below_idx, DEAD_PLAYER);
+            } else if (is_round(below_object) && obj_x > 0 && is_free(idx - 1) && is_free(idx - main_width - 1)) {
+                set_obj(idx, SPACE);
+                set_obj(idx - 1, stat_type);
+                has_moved.set_index(idx - 1, true);
+            } else if (is_round(below_object) && obj_x < main_width - 1 && is_free(idx + 1) && is_free(idx - main_width + 1)) {
+                set_obj(idx, SPACE);
+                set_obj(idx + 1, stat_type);
+                has_moved.set_index(idx + 1, true);
+            } else {
+                set_obj(idx, stat_type);
             }
         }
+    }
+
+    int count_diamonds() {
+        int diamonds = 0;
+        for (int idx = 0; idx < main_area; ++idx) {
+            if (get_stationary_type(get_obj(idx)) == DIAMOND) {
+                ++diamonds;
+            }
+        }
+        return diamonds;
     }
 
     void serialize(WriteBuffer *b) override {
@@ -416,7 +424,7 @@ class MinerGame : public BasicAbstractGame {
         auto miner_state = static_cast<client::MinerState *>(state);
         auto grid_vals = miner_state->get_grid();
 
-        for (int idx = 0; idx < miner_state->get_grid_width() * miner_state->get_grid_height(); idx++) {
+        for (int idx = 0; idx < miner_state->get_grid_width() * miner_state->get_grid_height(); ++idx) {
             set_obj(idx, (*grid_vals)[idx]);
         }
 

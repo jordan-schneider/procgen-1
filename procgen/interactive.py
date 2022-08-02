@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import argparse
 
-from procgen import ProcgenGym3Env
-from .env import ENV_NAMES
 from gym3 import Interactive, VideoRecorderWrapper, unwrap
+
+from procgen import ProcgenGym3Env
+
+from .env import ENV_NAMES
 
 
 class ProcgenInteractive(Interactive):
@@ -19,7 +21,8 @@ class ProcgenInteractive(Interactive):
             print("load state")
             if self._saved_state is not None:
                 unwrap(self._env).set_state(self._saved_state)
-        super()._update(dt, keys_clicked, keys_pressed)
+        elif len(keys_clicked) > 0:
+            super()._update(dt, keys_clicked, keys_pressed)
 
 
 def make_interactive(vision, record_dir, **kwargs):
@@ -43,6 +46,7 @@ def make_interactive(vision, record_dir, **kwargs):
         info_key=info_key,
         width=w * 12,
         height=h * 12,
+        synchronous=True,
     )
 
 

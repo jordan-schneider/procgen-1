@@ -19,7 +19,7 @@ dependencies = [
     "sklearn",
     "scipy",
     "gym3",
-    "../experiment_server",
+    "experiment_server @ git+https://github.com/jordan-schneider/experiment-server.git#egg=experiment_server"
 ]
 
 [project.optional-dependencies]
@@ -39,5 +39,5 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["experiment_server"]
-package-data = {experiment_server = ["py.typed"]}
+packages = ["question_gen"]
+package-data = {question_gen = ["py.typed"]}
