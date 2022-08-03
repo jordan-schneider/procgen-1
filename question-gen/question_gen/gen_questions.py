@@ -198,6 +198,9 @@ def build_questions_by_done(
 def collect_even_trajs_per_policy(
     traj_paths: Sequence[Path], policies: Set[Path], n: int
 ) -> Dict[Path, List[FeatureTrajectory]]:
+    # TODO: This assumes a lot about the file structure which might not be true. If I have to change this, just record the env in the trajs in the first place.
+    env_name = traj_paths[0].parent.parent.name
+
     done_paths = 0
     out: Dict[Path, List[FeatureTrajectory]] = {policy: [] for policy in policies}
     while done_paths < len(traj_paths):
@@ -211,15 +214,16 @@ def collect_even_trajs_per_policy(
                 new_rows = new_rows.iloc[: min(rows_needed, len(new_rows))]
 
                 out[policy].extend(
-                    FeatureTrajectory(
-                        start_state=row.grid[0],
-                        actions=row.actions,
-                        env_name=row.env,
-                        modality="traj",
-                        features=row.features,
-                        reason=f"From policy {policy}",
-                    )
-                    for row in new_rows
+                    [
+                        FeatureTrajectory(
+                            start_state=row.grid[0],
+                            actions=row.actions,
+                            env_name=env_name,
+                            modality="traj",
+                            features=row.features,
+                        )
+                        for _, row in new_rows.iterrows()
+                    ]
                 )
                 if len(out[policy]) == n:
                     done_paths += 1
@@ -229,6 +233,7 @@ def collect_even_trajs_per_policy(
 def collect_even_trajs_per_done(
     traj_paths: Sequence[Path], n: int
 ) -> Tuple[List[FeatureTrajectory], List[FeatureTrajectory]]:
+    env_name = traj_paths[0].parent.parent.name
     done_trajs: List[FeatureTrajectory] = []
     not_done_trajs: List[FeatureTrajectory] = []
     while len(done_trajs) < n and len(not_done_trajs) < n:
@@ -237,34 +242,34 @@ def collect_even_trajs_per_done(
 
             done_rows_needed = n - len(done_trajs)
             if done_rows_needed > 0:
-                new_rows = data.df[data.df.features[6] > 0]
+                new_rows = data.df.loc[data.df.total_feature.apply(lambda x: x[5] > 0)]
                 new_rows = new_rows.iloc[: min(done_rows_needed, len(new_rows))]
                 done_trajs.extend(
                     FeatureTrajectory(
                         start_state=row.grid[0],
                         actions=row.actions,
-                        env_name=row.env,
+                        env_name=env_name,
                         modality="traj",
                         features=row.features,
                         reason="Trajectory finished",
                     )
-                    for row in new_rows
+                    for _, row in new_rows.iterrows()
                 )
 
             not_done_rows_needed = n - len(not_done_trajs)
             if not_done_rows_needed > 0:
-                new_rows = data.df[data.df.features[6] == 0]
+                new_rows = data.df.loc[data.df.total_feature.apply(lambda x: x[5] == 0)]
                 new_rows = new_rows.iloc[: min(not_done_rows_needed, len(new_rows))]
                 not_done_trajs.extend(
                     FeatureTrajectory(
                         start_state=row.grid[0],
                         actions=row.actions,
-                        env_name=row.env,
+                        env_name=env_name,
                         modality="traj",
                         features=row.features,
                         reason="Trajectory not finished",
                     )
-                    for row in new_rows
+                    for _, row in new_rows.iterrows()
                 )
     return done_trajs, not_done_trajs
 
@@ -273,7 +278,7 @@ def collect_policies(traj_paths: Sequence[Path]) -> Set[Path]:
     policies = set()
     for path in traj_paths:
         data = pkl.load(path.open("rb"))
-        policies.update(data.df.policies.unique())
+        policies.update(data.df.policy.unique())
     return policies
 
 
@@ -283,7 +288,7 @@ def select_infogain_questions(
     n: int,
     init_questions: int = 200,
 ) -> List[FeatureQuestion]:
-    question_diffs = compute_diffs([q for q, _ in questions])
+    question_diffs = compute_diffs(questions)
     indices = successive_elimination(question_diffs, reward_samples, n, init_questions)
     return np.array(questions)[indices].tolist()
 
@@ -307,7 +312,9 @@ def gen_infogain_questions_from_saved_trajs(
         reward, reward_variance, n_reward_samples, rng
     )
 
-    questions = build_questions_from_trajs(traj_paths, n_by_policy, n_by_done, rng)
+    questions = build_questions_from_trajs(
+        [Path(p) for p in traj_paths], n_by_policy, n_by_done, rng
+    )
     questions = select_infogain_questions(
         questions, reward_samples, n_questions, n_init_questions
     )
