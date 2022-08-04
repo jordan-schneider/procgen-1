@@ -295,7 +295,7 @@ def select_infogain_questions(
 
 def gen_infogain_questions_from_saved_trajs(
     db_path: Path,
-    traj_paths: List[Path],
+    traj_dir: Path,
     reward_path: Path,
     n_by_policy: int,
     n_by_done: int,
@@ -311,6 +311,8 @@ def gen_infogain_questions_from_saved_trajs(
     reward_samples = centered_reward_samples(
         reward, reward_variance, n_reward_samples, rng
     )
+
+    traj_paths = Path(traj_dir).glob("trajectories_*.pkl")
 
     questions = build_questions_from_trajs(
         [Path(p) for p in traj_paths], n_by_policy, n_by_done, rng
