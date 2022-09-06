@@ -6,8 +6,9 @@ from typing import Dict, List, Literal, Optional, Sequence, Set, Tuple
 
 import fire  # type: ignore
 import numpy as np
+import pandas as pd
 from experiment_server.query import insert_question, insert_traj, save_questions
-from experiment_server.type import DataModality, FeatureTrajectory, Trajectory
+from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES_T, ProcgenGym3Env
@@ -173,7 +174,7 @@ def build_questions_by_policy(
 ) -> Dict[Tuple[Path, Path], List[Tuple[FeatureTrajectory, FeatureTrajectory]]]:
     policies = collect_policies(traj_paths)
     n_policies = len(policies)
-    n_pairs = int(n_policies * (n_policies - 1) / 2)
+    n_pairs = max(1, int(n_policies * (n_policies - 1) / 2))
     questions_per_pair = n // n_pairs
     trajs_per_policy = collect_even_trajs_per_policy(
         traj_paths, policies, questions_per_pair
@@ -215,13 +216,7 @@ def collect_even_trajs_per_policy(
 
                 out[policy].extend(
                     [
-                        FeatureTrajectory(
-                            start_state=row.grid[0],
-                            actions=row.actions,
-                            env_name=env_name,
-                            modality="traj",
-                            features=row.features,
-                        )
+                        dataset_row_to_feature_traj(row, env_name, reason=str(policy))
                         for _, row in new_rows.iterrows()
                     ]
                 )
@@ -245,14 +240,7 @@ def collect_even_trajs_per_done(
                 new_rows = data.df.loc[data.df.total_feature.apply(lambda x: x[5] > 0)]
                 new_rows = new_rows.iloc[: min(done_rows_needed, len(new_rows))]
                 done_trajs.extend(
-                    FeatureTrajectory(
-                        start_state=row.grid[0],
-                        actions=row.actions,
-                        env_name=env_name,
-                        modality="traj",
-                        features=row.features,
-                        reason="Trajectory finished",
-                    )
+                    dataset_row_to_feature_traj(row, env_name, "Trajectory finished")
                     for _, row in new_rows.iterrows()
                 )
 
@@ -261,13 +249,8 @@ def collect_even_trajs_per_done(
                 new_rows = data.df.loc[data.df.total_feature.apply(lambda x: x[5] == 0)]
                 new_rows = new_rows.iloc[: min(not_done_rows_needed, len(new_rows))]
                 not_done_trajs.extend(
-                    FeatureTrajectory(
-                        start_state=row.grid[0],
-                        actions=row.actions,
-                        env_name=env_name,
-                        modality="traj",
-                        features=row.features,
-                        reason="Trajectory not finished",
+                    dataset_row_to_feature_traj(
+                        row, env_name, "Trajectory not finished"
                     )
                     for _, row in new_rows.iterrows()
                 )
@@ -324,6 +307,24 @@ def gen_infogain_questions_from_saved_trajs(
     save_questions(conn, questions, "infogain", env_name=questions[0][0].env_name)
 
     conn.close()
+
+
+def dataset_row_to_feature_traj(
+    row: pd.Series, env_name: str, reason: str
+) -> FeatureTrajectory:
+    return FeatureTrajectory(
+        start_state=State(
+            grid=row.grid[0],
+            grid_shape=row.grid[0].shape,
+            agent_pos=row.agent_pos[0],
+            exit_pos=row.exit_pos[0],
+        ),
+        actions=row.actions,
+        env_name=env_name,
+        modality="traj",
+        features=row.features,
+        reason=reason,
+    )
 
 
 def centered_reward_samples(
