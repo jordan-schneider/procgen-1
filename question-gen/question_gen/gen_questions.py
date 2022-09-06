@@ -315,7 +315,7 @@ def dataset_row_to_feature_traj(
     return FeatureTrajectory(
         start_state=State(
             grid=row.grid[0],
-            grid_shape=row.grid[0].shape,
+            grid_shape=row.grid_shape,
             agent_pos=row.agent_pos[0],
             exit_pos=row.exit_pos[0],
         ),
