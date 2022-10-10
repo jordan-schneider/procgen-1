@@ -94,7 +94,7 @@ def gen_random_action_questions(
     verbosity: Literal["INFO", "DEBUG"] = "INFO",
 ) -> None:
     setup_logging(verbosity)
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
 
     conn = sqlite3.connect(db_path)
     env_name = env
