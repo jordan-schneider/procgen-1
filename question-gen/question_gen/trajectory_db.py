@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from functools import partial
 from itertools import product
 from typing import Dict, Final, List, Literal, Optional, Sequence, Tuple, Union, cast
 
@@ -56,6 +57,13 @@ class FeatureDataset:
         self.states: Dict[str, Optional[np.ndarray]] = {}
 
         self.rng = rng
+
+    @staticmethod
+    def from_pickled(data: FeatureDataset) -> FeatureDataset:
+        out = FeatureDataset(data.rng, data.df.columns[len(FeatureDataset.BASE_COLS) :])
+        out.df = deepcopy(data.df)
+        out.states = deepcopy(data.states)
+        return out
 
     def init_df(self):
         self.df["policy"] = self.df["policy"].astype("string")
@@ -222,18 +230,40 @@ class FeatureDataset:
         return np.stack(out)
 
     def clip(self, max_length: int) -> FeatureDataset:
+        def clip_np(arr: Optional[np.ndarray], max_length: int) -> Optional[np.ndarray]:
+            if arr is None:
+                return None
+            if max_length == 0:
+                if len(arr.shape) == 1:
+                    return np.empty((0,))
+                else:
+                    return np.empty((0, *arr.shape[1:]))
+            return arr[-max_length:]
+
         out = deepcopy(self)
         to_clip = out.df["length"] > max_length
-        out.df.loc[to_clip, "states"] = out.df.loc[to_clip, "states"][-max_length:]
-        out.df.loc[to_clip, "actions"] = out.df.loc[to_clip, "actions"][-max_length:]
-        out.df.loc[to_clip, "features"] = out.df.loc[to_clip, "features"][-max_length:]
-        out.df.loc[to_clip, "total_feature"] = np.sum(
-            out.df.loc[to_clip, "feautres"], axis=0
+
+        out.df.loc[to_clip, "states"] = out.df.loc[to_clip, "states"].apply(
+            partial(clip_np, max_length=max_length)
+        )
+        out.df.loc[to_clip, "features"] = out.df.loc[to_clip, "features"].apply(
+            partial(clip_np, max_length=max_length)
+        )
+        out.df.loc[to_clip, "actions"] = out.df.loc[to_clip, "actions"].apply(
+            partial(clip_np, max_length=max_length - 1)
+        )
+
+        out.df.loc[to_clip, "total_feature"] = out.df.loc[to_clip, "features"].apply(
+            np.sum, axis=0
         )
 
         # TODO: The extras to clip are hard coded. In principle I would like to have a numpy array type with named
         # dimensions, but all of the options are overly complicated. Struct/record arrays in numpy or switch everything
         # to pandas.
-        out.df.loc[to_clip, "grid"] = out.df.loc[to_clip, "grid"][-max_length:]
+        out.df.loc[to_clip, "grid"] = out.df.loc[to_clip, "grid"].apply(
+            partial(clip_np, max_length=max_length)
+        )
+
+        out.df.loc[to_clip, "length"] = max_length - 1
 
         return out

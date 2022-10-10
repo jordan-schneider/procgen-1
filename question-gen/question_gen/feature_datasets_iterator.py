@@ -13,6 +13,8 @@ class FeatureDatasetsIterator(Iterable[FeatureDataset]):
     def __iter__(self):
         for path in self.paths:
             data: FeatureDataset = pkl.load(path.open("rb"))
+            if not hasattr(data, "clip"):
+                data = FeatureDataset.from_pickled(data)
             if self.max_length is not None:
                 data = data.clip(max_length=self.max_length)
             yield data
