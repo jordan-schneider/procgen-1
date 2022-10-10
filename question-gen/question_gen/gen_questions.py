@@ -14,6 +14,7 @@ from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 
 from question_gen.biyik import successive_elimination
 from question_gen.feature_datasets_iterator import FeatureDatasetsIterator
+from question_gen.gen_action_pairs import gen_action_pairs
 from question_gen.gen_trajectory import (
     collect_feature_questions,
     collect_trajs,
@@ -81,6 +82,37 @@ def gen_random_questions(
             traj_2_id = insert_traj(conn, traj_2)
             insert_question(conn, (traj_1_id, traj_2_id), "random", env_name)
             questions += 1
+    conn.commit()
+    conn.close()
+
+
+def gen_random_action_questions(
+    db_path: Path,
+    env: FEATURE_ENV_NAMES,
+    n_questions: int,
+    seed: int = 0,
+    verbosity: Literal["INFO", "DEBUG"] = "INFO",
+) -> None:
+    setup_logging(verbosity)
+    rng = np.random.RandomState(seed)
+
+    conn = sqlite3.connect(db_path)
+    env_name = env
+
+    env = make_env(env, num=1, reward=1)
+
+    questions = gen_action_pairs(
+        env=env,
+        env_name=env_name,
+        n_pairs=n_questions,
+        n_steps=n_questions * 10,
+        rng=rng,
+    )
+
+    for traj_1, traj_2 in questions:
+        traj_1_id = insert_traj(conn, traj_1)
+        traj_2_id = insert_traj(conn, traj_2)
+        insert_question(conn, (traj_1_id, traj_2_id), "random", env_name)
     conn.commit()
     conn.close()
 
@@ -318,6 +350,14 @@ def get_env_from_path(path: Path) -> str:
 def dataset_row_to_feature_traj(
     row: pd.Series, env_name: str, reason: str
 ) -> FeatureTrajectory:
+    n_actions = row.actions.shape[0]
+    if n_actions == 0:
+        modality = "state"
+    elif n_actions == 1:
+        modality = "action"
+    else:
+        modality = "traj"
+
     return FeatureTrajectory(
         start_state=State(
             grid=row.grid[0],
@@ -327,7 +367,7 @@ def dataset_row_to_feature_traj(
         ),
         actions=row.actions,
         env_name=env_name,
-        modality="traj",
+        modality=modality,
         features=row.features,
         reason=reason,
     )
@@ -363,6 +403,7 @@ if __name__ == "__main__":
     fire.Fire(
         {
             "gen_random_questions": gen_random_questions,
+            "gen_random_action_questions": gen_random_action_questions,
             "gen_infogain_questions": gen_batch_infogain_questions,
             "infogain_from_saved_trajs": gen_infogain_questions_from_saved_trajs,
             "init_db": init_db,
