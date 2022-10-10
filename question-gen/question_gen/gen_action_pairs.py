@@ -67,7 +67,7 @@ def get_branched_path(
         )
         second_traj = FeatureTrajectory(
             start_state=start_state,
-            actions=np.array([first_action]),
+            actions=np.array([second_action]),
             env_name=env_name,
             modality="action",
             features=np.array([start_feature, second_features]),
