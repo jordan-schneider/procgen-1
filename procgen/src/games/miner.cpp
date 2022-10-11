@@ -425,11 +425,22 @@ class MinerGame : public BasicAbstractGame {
         auto grid_vals = miner_state->get_grid();
 
         for (int idx = 0; idx < miner_state->get_grid_width() * miner_state->get_grid_height(); ++idx) {
-            set_obj(idx, (*grid_vals)[idx]);
+            int obj = (*grid_vals)[idx];
+            set_obj(idx, obj);
+            if (obj == DEAD_PLAYER) {
+                died = true;
+            }
         }
 
-        agent->x = miner_state->get_agent_x() + 0.5f;
-        agent->y = miner_state->get_agent_y() + 0.5f;
+        if (died) {
+            auto agent_ptr = std::find_if(entities.begin(), entities.end(), [](std::shared_ptr<Entity> e) { return e->type == PLAYER; });
+            if (agent_ptr != entities.end()) {
+                entities.erase(agent_ptr);
+            }
+        } else {
+            agent->x = miner_state->get_agent_x() + 0.5f;
+            agent->y = miner_state->get_agent_y() + 0.5f;
+        }
 
         auto exit = *std::find_if(entities.begin(), entities.end(), [](std::shared_ptr<Entity> e) { return e->type == EXIT; });
 
