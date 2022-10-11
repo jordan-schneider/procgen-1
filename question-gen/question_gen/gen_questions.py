@@ -1,3 +1,4 @@
+import pickle as pkl
 import sqlite3
 from itertools import tee
 from pathlib import Path
@@ -399,6 +400,30 @@ def pairwise(iterable):
     return zip(a, b)
 
 
+def lint_db(db_path: Path) -> None:
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("SELECT start_state, actions FROM trajectories")
+    for (start_state, actions) in c.fetchall():
+        start_state = pkl.loads(start_state)
+        if np.any(start_state.grid == 12):
+            actions = pkl.loads(actions)
+            print(
+                f"Found a trajectory with fire in the start state and {len(actions)} actions"
+            )
+    conn.close()
+
+
+def lint_trajs(traj_dir: Path, max_length: Optional[int] = None) -> None:
+    datasets = FeatureDatasetsIterator(
+        Path(traj_dir).glob("trajectories_*.pkl"), max_length=max_length
+    )
+    for dataset in datasets:
+        for states in dataset.df["grid"]:
+            if np.any(states[0] == 12):
+                print("Found a trajectory with fire in start state")
+
+
 if __name__ == "__main__":
     fire.Fire(
         {
@@ -408,5 +433,7 @@ if __name__ == "__main__":
             "infogain_from_saved_trajs": gen_infogain_questions_from_saved_trajs,
             "init_db": init_db,
             "clean_db": clean_db,
+            "lint_db": lint_db,
+            "lint_trajs": lint_trajs,
         }
     )
