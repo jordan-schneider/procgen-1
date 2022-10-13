@@ -10,6 +10,31 @@ import numpy as np
 import pandas as pd  # type: ignore
 
 
+def clip_np(arr: Optional[np.ndarray], max_length: int) -> Optional[np.ndarray]:
+    if arr is None:
+        return None
+    if max_length == 0:
+        if len(arr.shape) == 1:
+            return np.empty((0,))
+        else:
+            return np.empty((0, *arr.shape[1:]))
+    return arr[-max_length:]
+
+
+def clip_np_actions(
+    arr: Optional[np.ndarray], max_length: int, keep_last_action: bool
+) -> Optional[np.ndarray]:
+    if arr is None:
+        return None
+    if max_length == 0:
+        if len(arr.shape) == 1:
+            return np.empty((0,))
+        else:
+            return np.empty((0, *arr.shape[1:]))
+    last_index = len(arr) if keep_last_action else -1
+    return arr[-max_length:last_index]
+
+
 def count_items(arr: np.ndarray, item_shape: Tuple[int, ...]) -> int:
     if len(arr.shape) == len(item_shape) + 1 and arr.shape[1:] == item_shape:
         return arr.shape[0]
@@ -229,16 +254,7 @@ class FeatureDataset:
             out.append(firsts - seconds)
         return np.stack(out)
 
-    def clip(self, max_length: int) -> FeatureDataset:
-        def clip_np(arr: Optional[np.ndarray], max_length: int) -> Optional[np.ndarray]:
-            if arr is None:
-                return None
-            if max_length == 0:
-                if len(arr.shape) == 1:
-                    return np.empty((0,))
-                else:
-                    return np.empty((0, *arr.shape[1:]))
-            return arr[-max_length:]
+    def clip(self, max_length: int, keep_last_action: bool = True) -> FeatureDataset:
 
         out = deepcopy(self)
         to_clip = out.df["length"] > max_length
@@ -250,7 +266,11 @@ class FeatureDataset:
             partial(clip_np, max_length=max_length)
         )
         out.df.loc[to_clip, "actions"] = out.df.loc[to_clip, "actions"].apply(
-            partial(clip_np, max_length=max_length)
+            partial(
+                clip_np_actions,
+                max_length=max_length,
+                keep_last_action=keep_last_action,
+            )
         )
 
         out.df.loc[to_clip, "total_feature"] = out.df.loc[to_clip, "features"].apply(

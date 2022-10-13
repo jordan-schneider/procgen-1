@@ -40,7 +40,14 @@ def collect_trajs(
             obs, reward, first = env.observe()
             if not first:
                 actions.append(action[0])
-        out.append(Trajectory(start_state, np.stack(actions), env_name, modality))
+        out.append(
+            Trajectory(
+                start_state=start_state,
+                actions=np.stack(actions),
+                env_name=env_name,
+                modality=modality,
+            )
+        )
     return out
 
 

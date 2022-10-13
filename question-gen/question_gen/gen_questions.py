@@ -6,10 +6,8 @@ from typing import Dict, Iterable, List, Literal, Optional, Set, Tuple
 import fire  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
-from experiment_server.query import (insert_question, insert_traj,
-                                     save_questions)
-from experiment_server.type import (DataModality, FeatureTrajectory, State,
-                                    Trajectory)
+from experiment_server.query import insert_question, insert_traj, save_questions
+from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES_T, ProcgenGym3Env
@@ -17,8 +15,11 @@ from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 from question_gen.biyik import successive_elimination
 from question_gen.feature_datasets_iterator import FeatureDatasetsIterator
 from question_gen.gen_action_pairs import gen_action_pairs
-from question_gen.gen_trajectory import (collect_feature_questions,
-                                         collect_trajs, compute_diffs)
+from question_gen.gen_trajectory import (
+    collect_feature_questions,
+    collect_trajs,
+    compute_diffs,
+)
 from question_gen.random_policy import RandomGridPolicy, RandomPolicy
 from question_gen.trajectory_db import FeatureDataset
 from question_gen.util import setup_logging
@@ -26,11 +27,13 @@ from question_gen.util import setup_logging
 Question = Tuple[Trajectory, Trajectory]
 FeatureQuestion = Tuple[FeatureTrajectory, FeatureTrajectory]
 
+
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
 
 def init_db(db_path: Path, schema_path: Path):
     conn = sqlite3.connect(db_path)
@@ -197,25 +200,30 @@ def build_questions_from_trajs(
     env: str,
     n_by_policy: int,
     n_by_done: int,
+    keep_cstates: bool,
     rng: np.random.Generator,
 ) -> List[FeatureQuestion]:
     questions: List[FeatureQuestion] = []
-    for question_block in build_questions_by_policy(trajs, env, n_by_policy).values():
+    for question_block in build_questions_by_policy(
+        trajs, env, n_by_policy, keep_cstates
+    ).values():
         questions.extend(question_block)
-    for question_block in build_questions_by_done(trajs, env, n_by_done, rng).values():
+    for question_block in build_questions_by_done(
+        trajs, env, n_by_done, keep_cstates, rng
+    ).values():
         questions.extend(question_block)
     return questions
 
 
 def build_questions_by_policy(
-    trajs: Iterable[FeatureDataset], env: str, n: int
+    trajs: Iterable[FeatureDataset], env: str, n: int, keep_cstates: bool
 ) -> Dict[Tuple[Path, Path], List[Tuple[FeatureTrajectory, FeatureTrajectory]]]:
     policies = collect_policies(trajs)
     n_policies = len(policies)
     n_pairs = max(1, int(n_policies * (n_policies - 1) / 2))
     questions_per_pair = n // n_pairs
     trajs_per_policy = collect_even_trajs_per_policy(
-        trajs, env, policies, questions_per_pair
+        trajs, env, policies, questions_per_pair, keep_cstates
     )
     return {
         (first, second): list(zip(trajs_per_policy[first], trajs_per_policy[second]))
@@ -224,9 +232,15 @@ def build_questions_by_policy(
 
 
 def build_questions_by_done(
-    trajs: Iterable[FeatureDataset], env: str, n: int, rng: np.random.Generator
+    trajs: Iterable[FeatureDataset],
+    env: str,
+    n: int,
+    keep_cstates: bool,
+    rng: np.random.Generator,
 ) -> Dict[Tuple[bool, bool], List[Tuple[FeatureTrajectory, FeatureTrajectory]]]:
-    done_trajs, not_done_trajs = collect_even_trajs_per_done(trajs, env, n // 3)
+    done_trajs, not_done_trajs = collect_even_trajs_per_done(
+        trajs, env, n // 3, keep_cstates
+    )
     return {
         (True, True): list(zip(done_trajs, rng.permutation(done_trajs))),
         (True, False): list(zip(done_trajs, not_done_trajs)),
@@ -235,7 +249,11 @@ def build_questions_by_done(
 
 
 def collect_even_trajs_per_policy(
-    trajs: Iterable[FeatureDataset], env: str, policies: Set[Path], n: int
+    trajs: Iterable[FeatureDataset],
+    env: str,
+    policies: Set[Path],
+    n: int,
+    keep_cstates: bool,
 ) -> Dict[Path, List[FeatureTrajectory]]:
     full_policies = 0
     out: Dict[Path, List[FeatureTrajectory]] = {policy: [] for policy in policies}
@@ -250,7 +268,9 @@ def collect_even_trajs_per_policy(
 
                 out[policy].extend(
                     [
-                        dataset_row_to_feature_traj(row, env, reason=str(policy))
+                        dataset_row_to_feature_traj(
+                            row, env, reason=str(policy), keep_cstates=keep_cstates
+                        )
                         for _, row in new_rows.iterrows()
                     ]
                 )
@@ -260,7 +280,7 @@ def collect_even_trajs_per_policy(
 
 
 def collect_even_trajs_per_done(
-    trajs: Iterable[FeatureDataset], env: str, n: int
+    trajs: Iterable[FeatureDataset], env: str, n: int, keep_cstates: bool
 ) -> Tuple[List[FeatureTrajectory], List[FeatureTrajectory]]:
     done_trajs: List[FeatureTrajectory] = []
     not_done_trajs: List[FeatureTrajectory] = []
@@ -273,7 +293,12 @@ def collect_even_trajs_per_done(
                 ]
                 new_rows = new_rows.iloc[: min(done_rows_needed, len(new_rows))]
                 done_trajs.extend(
-                    dataset_row_to_feature_traj(row, env, "Trajectory finished")
+                    dataset_row_to_feature_traj(
+                        row,
+                        env,
+                        reason="Trajectory finished",
+                        keep_cstates=keep_cstates,
+                    )
                     for _, row in new_rows.iterrows()
                 )
 
@@ -282,7 +307,12 @@ def collect_even_trajs_per_done(
                 new_rows = data.df.loc[data.df.total_feature.apply(lambda x: x[5] == 0)]
                 new_rows = new_rows.iloc[: min(not_done_rows_needed, len(new_rows))]
                 not_done_trajs.extend(
-                    dataset_row_to_feature_traj(row, env, "Trajectory not finished")
+                    dataset_row_to_feature_traj(
+                        row,
+                        env,
+                        reason="Trajectory not finished",
+                        keep_cstates=keep_cstates,
+                    )
                     for _, row in new_rows.iterrows()
                 )
     return done_trajs, not_done_trajs
@@ -318,6 +348,7 @@ def gen_infogain_questions_from_saved_trajs(
     n_reward_samples: int = 1000,
     n_init_questions: int = 200,
     max_length: Optional[int] = None,
+    keep_cstates: bool = False,
 ):
     conn = sqlite3.connect(db_path)
     rng = np.random.default_rng(seed)
@@ -335,6 +366,7 @@ def gen_infogain_questions_from_saved_trajs(
         env,
         n_by_policy,
         n_by_done,
+        keep_cstates,
         rng,
     )
     questions = select_infogain_questions(
@@ -351,28 +383,33 @@ def get_env_from_path(path: Path) -> str:
     return path.parent.parent.name
 
 
+def modality_from_n_actions(n_actions: int) -> DataModality:
+    if n_actions == 0:
+        return "state"
+    elif n_actions == 1:
+        return "action"
+    elif n_actions > 1:
+        return "traj"
+    else:
+        raise ValueError(f"n_actions={n_actions} must be nonnegative")
+
+
 def dataset_row_to_feature_traj(
-    row: pd.Series, env_name: str, reason: str
+    row: pd.Series, env_name: str, reason: str, keep_cstates: bool
 ) -> FeatureTrajectory:
     n_actions = row.actions.shape[0]
-    if n_actions == 0:
-        modality = "state"
-    elif n_actions == 1:
-        modality = "action"
-    else:
-        modality = "traj"
 
     return FeatureTrajectory(
         start_state=State(
             grid=row.grids[0],
-            grid_shape=row.grid_shape,
+            grid_shape=row.grid_shapes[0],
             agent_pos=row.agent_pos[0],
             exit_pos=row.exit_pos[0],
         ),
-        cstates=row.cstates,
+        cstates=row.cstates if keep_cstates else None,
         actions=row.actions,
         env_name=env_name,
-        modality=modality,
+        modality=modality_from_n_actions(n_actions),
         features=row.features,
         reason=reason,
     )
@@ -395,9 +432,6 @@ def clean_db(db_path: Path) -> None:
 
     conn.commit()
     conn.close()
-
-
-
 
 
 if __name__ == "__main__":
