@@ -250,7 +250,7 @@ class FeatureDataset:
             partial(clip_np, max_length=max_length)
         )
         out.df.loc[to_clip, "actions"] = out.df.loc[to_clip, "actions"].apply(
-            partial(clip_np, max_length=max_length - 1)
+            partial(clip_np, max_length=max_length)
         )
 
         out.df.loc[to_clip, "total_feature"] = out.df.loc[to_clip, "features"].apply(
@@ -260,10 +260,13 @@ class FeatureDataset:
         # TODO: The extras to clip are hard coded. In principle I would like to have a numpy array type with named
         # dimensions, but all of the options are overly complicated. Struct/record arrays in numpy or switch everything
         # to pandas.
-        out.df.loc[to_clip, "grid"] = out.df.loc[to_clip, "grid"].apply(
+        out.df.loc[to_clip, "grids"] = out.df.loc[to_clip, "grids"].apply(
+            partial(clip_np, max_length=max_length)
+        )
+        out.df.loc[to_clip, "cstates"] = out.df.loc[to_clip, "cstates"].apply(
             partial(clip_np, max_length=max_length)
         )
 
-        out.df.loc[to_clip, "length"] = max_length - 1
+        out.df.loc[to_clip, "length"] = max_length
 
         return out

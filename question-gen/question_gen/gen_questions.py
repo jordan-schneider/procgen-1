@@ -1,4 +1,3 @@
-import pickle as pkl
 import sqlite3
 from itertools import tee
 from pathlib import Path
@@ -7,8 +6,10 @@ from typing import Dict, Iterable, List, Literal, Optional, Set, Tuple
 import fire  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
-from experiment_server.query import insert_question, insert_traj, save_questions
-from experiment_server.type import DataModality, FeatureTrajectory, State, Trajectory
+from experiment_server.query import (insert_question, insert_traj,
+                                     save_questions)
+from experiment_server.type import (DataModality, FeatureTrajectory, State,
+                                    Trajectory)
 from linear_procgen import ENV_NAMES as FEATURE_ENV_NAMES
 from linear_procgen import make_env
 from procgen.env import ENV_NAMES_T, ProcgenGym3Env
@@ -16,11 +17,8 @@ from procgen.env import ENV_NAMES_T, ProcgenGym3Env
 from question_gen.biyik import successive_elimination
 from question_gen.feature_datasets_iterator import FeatureDatasetsIterator
 from question_gen.gen_action_pairs import gen_action_pairs
-from question_gen.gen_trajectory import (
-    collect_feature_questions,
-    collect_trajs,
-    compute_diffs,
-)
+from question_gen.gen_trajectory import (collect_feature_questions,
+                                         collect_trajs, compute_diffs)
 from question_gen.random_policy import RandomGridPolicy, RandomPolicy
 from question_gen.trajectory_db import FeatureDataset
 from question_gen.util import setup_logging
@@ -28,6 +26,11 @@ from question_gen.util import setup_logging
 Question = Tuple[Trajectory, Trajectory]
 FeatureQuestion = Tuple[FeatureTrajectory, FeatureTrajectory]
 
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 def init_db(db_path: Path, schema_path: Path):
     conn = sqlite3.connect(db_path)
@@ -361,11 +364,12 @@ def dataset_row_to_feature_traj(
 
     return FeatureTrajectory(
         start_state=State(
-            grid=row.grid[0],
+            grid=row.grids[0],
             grid_shape=row.grid_shape,
             agent_pos=row.agent_pos[0],
             exit_pos=row.exit_pos[0],
         ),
+        cstates=row.cstates,
         actions=row.actions,
         env_name=env_name,
         modality=modality,
@@ -393,35 +397,7 @@ def clean_db(db_path: Path) -> None:
     conn.close()
 
 
-def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
 
-
-def lint_db(db_path: Path) -> None:
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT start_state, actions FROM trajectories")
-    for (start_state, actions) in c.fetchall():
-        start_state = pkl.loads(start_state)
-        if np.any(start_state.grid == 12):
-            actions = pkl.loads(actions)
-            print(
-                f"Found a trajectory with fire in the start state and {len(actions)} actions"
-            )
-    conn.close()
-
-
-def lint_trajs(traj_dir: Path, max_length: Optional[int] = None) -> None:
-    datasets = FeatureDatasetsIterator(
-        Path(traj_dir).glob("trajectories_*.pkl"), max_length=max_length
-    )
-    for dataset in datasets:
-        for states in dataset.df["grid"]:
-            if np.any(states[0] == 12):
-                print("Found a trajectory with fire in start state")
 
 
 if __name__ == "__main__":
@@ -433,7 +409,5 @@ if __name__ == "__main__":
             "infogain_from_saved_trajs": gen_infogain_questions_from_saved_trajs,
             "init_db": init_db,
             "clean_db": clean_db,
-            "lint_db": lint_db,
-            "lint_trajs": lint_trajs,
         }
     )

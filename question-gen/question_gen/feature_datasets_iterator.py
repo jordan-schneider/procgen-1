@@ -1,12 +1,12 @@
 import pickle as pkl
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
 from question_gen.trajectory_db import FeatureDataset
 
 
 class FeatureDatasetsIterator(Iterable[FeatureDataset]):
-    def __init__(self, paths: List[Path], max_length: Optional[int] = None) -> None:
+    def __init__(self, paths: Iterable[Path], max_length: Optional[int] = None) -> None:
         self.paths = paths
         self.max_length = max_length
 
