@@ -336,6 +336,28 @@ def select_infogain_questions(
     return np.array(questions)[indices].tolist()
 
 
+def filter_double_fire_questions(
+    questions: List[FeatureQuestion],
+) -> List[FeatureQuestion]:
+    """Removes questions which both have a fire in any state.
+
+    This is most useful when the questions are a state comparison, as two states where the agent has exploded are not
+    very interesting to learn from.
+
+    Args:
+        questions (List[FeatureQuestion]): List of questions to filter
+
+    Returns:
+        List[FeatureQuestion]: List of questions with all double fire questions removed
+    """
+    out = []
+    for (left, right) in questions:
+        if np.any(left.start_state.grid == 12) and np.any(right.start_state.grid == 12):
+            continue
+        out.append((left, right))
+    return out
+
+
 def gen_infogain_questions_from_saved_trajs(
     db_path: Path,
     traj_dir: Path,
@@ -369,6 +391,13 @@ def gen_infogain_questions_from_saved_trajs(
         keep_cstates,
         rng,
     )
+    if (
+        len(questions) > 0
+        and (actions := questions[0][0].actions) is not None
+        and len(actions) == 0
+    ):
+        # If the questions are state comparisons, remove any questions where both states have the robot exploded.
+        questions = filter_double_fire_questions(questions)
     questions = select_infogain_questions(
         questions, reward_samples, n_questions, n_init_questions
     )
