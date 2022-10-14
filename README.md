@@ -1,4 +1,11 @@
-This is a fork of openai/procgen that aims to expose the ground truth latent state of environments through the `info` variable passed into python. The original procgen readme is below.
+This repo contains a cheerp transpilable version of OpenAI's procgen repository that also exposes the latent space of the environment in the info dict. The work to get the transpile working in the first place was done by Yuri Iozzelli (yuri91 on github). The modifications to the environments themselves and the work extracting out the latent state was done by Jordan Schneider.
+
+### Building
+
+Run build.sh. See procgen/CHEERP_README.md for details.
+
+The original Procgen README follows.
+
 
 **Status:** Maintenance (expect bug fixes and minor updates)
 
